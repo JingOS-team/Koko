@@ -1,5 +1,6 @@
 /*
  * SPDX-FileCopyrightText: (C) 2012-2015 Vishesh Handa <vhanda@kde.org>
+ * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
@@ -8,7 +9,6 @@
 #define EXIV2EXTRACTOR_H
 
 #include <exiv2/exiv2.hpp>
-
 #include <QDateTime>
 #include <QString>
 
@@ -33,6 +33,8 @@ public:
     }
 
     bool error() const;
+
+    bool setFileDateTime(QString locationPath,QString newFilePath);
 
 private:
     double fetchGpsDouble(const Exiv2::ExifData &data, const char *name);

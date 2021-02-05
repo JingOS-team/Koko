@@ -1,13 +1,18 @@
 /*
  * SPDX-FileCopyrightText: (C) 2012-2015 Vishesh Handa <vhanda@kde.org>
+ *                             2021 Wang Rui <wangrui@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "exiv2extractor.h"
-
 #include <QDebug>
 #include <QFile>
+#include <exiv2/exiv2.hpp>
+#include <cassert>
+#include <iostream>
+#include <fstream>
+#include <QFileInfo>
 
 Exiv2Extractor::Exiv2Extractor()
     : m_latitude(0)
@@ -19,6 +24,11 @@ Exiv2Extractor::Exiv2Extractor()
 static QDateTime dateTimeFromString(const QString &dateString)
 {
     QDateTime dateTime;
+
+    if (!dateTime.isValid()) {
+        dateTime = QDateTime::fromString(dateString, QStringLiteral("yyyy-MM-ddThh:mm:ss"));
+        dateTime.setTimeSpec(Qt::LocalTime);
+    }
 
     if (!dateTime.isValid()) {
         dateTime = QDateTime::fromString(dateString, QStringLiteral("yyyy-MM-dd"));
@@ -72,10 +82,6 @@ static QDateTime dateTimeFromString(const QString &dateString)
         dateTime.setTimeSpec(Qt::LocalTime);
     }
     if (!dateTime.isValid()) {
-        dateTime = QDateTime::fromString(dateString, QStringLiteral("yyyy:MM:dd hh:mm:ss"));
-        dateTime.setTimeSpec(Qt::LocalTime);
-    }
-    if (!dateTime.isValid()) {
         dateTime = QDateTime::fromString(dateString, Qt::SystemLocaleDate);
         dateTime.setTimeSpec(Qt::UTC);
     }
@@ -99,8 +105,6 @@ static QDateTime toDateTime(const Exiv2::Value &value)
     if (value.typeId() == Exiv2::asciiString) {
         QDateTime val = dateTimeFromString(value.toString().c_str());
         if (val.isValid()) {
-            // Datetime is stored in exif as local time.
-            val.setOffsetFromUtc(0);
             return val;
         }
     }
@@ -163,6 +167,82 @@ void Exiv2Extractor::extract(const QString &filePath)
         m_longitude *= -1;
 
     m_error = false;
+}
+
+bool Exiv2Extractor::setFileDateTime(QString locationPath,QString newFilePath)
+{
+    try {
+        QByteArray locationArr = QFile::encodeName(locationPath);
+        std::string locationString(locationArr.data(), locationArr.length());
+
+        Exiv2::LogMsg::setLevel(Exiv2::LogMsg::mute);
+#if EXIV2_TEST_VERSION(0, 27, 99)
+        Exiv2::Image::UniquePtr readImg;
+#else
+        Exiv2::Image::AutoPtr readImg;
+#endif
+        try {
+            readImg = Exiv2::ImageFactory::open(locationString);
+        } catch (const std::exception &) {
+            return false;
+        }
+        assert(readImg.get() != nullptr);
+
+        QByteArray arr = QFile::encodeName(newFilePath);
+        std::string fileString(arr.data(), arr.length());
+
+        Exiv2::LogMsg::setLevel(Exiv2::LogMsg::mute);
+#if EXIV2_TEST_VERSION(0, 27, 99)
+        Exiv2::Image::UniquePtr writeImg;
+#else
+        Exiv2::Image::AutoPtr writeImg;
+#endif
+        try {
+            writeImg = Exiv2::ImageFactory::open(fileString);
+        } catch (const std::exception &) {
+            return false;
+        }
+        assert(writeImg.get() != nullptr);
+
+        try {
+            readImg->readMetadata();
+        } catch (const std::exception &) {
+            return false;
+        }
+        const Exiv2::ExifData &data = readImg->exifData();
+        Exiv2::ExifData::const_iterator it = data.findKey(Exiv2::ExifKey("Exif.Photo.DateTimeOriginal"));
+        QDateTime locationDateTime;
+        if (it != data.end()) {
+            locationDateTime = toDateTime(it->value());
+        }
+        if (locationDateTime.isNull()) {
+            it = data.findKey(Exiv2::ExifKey("Exif.Image.DateTime"));
+            if (it != data.end()) {
+                locationDateTime = toDateTime(it->value());
+            }
+        }
+
+        if (locationDateTime.isNull()) {
+            locationDateTime = QFileInfo(locationPath).birthTime();
+        }
+        Exiv2::ExifData &writdata = writeImg->exifData();
+        writdata["Exif.Photo.DateTimeOriginal"] = locationDateTime.toString("yyyy-MM-ddTHH:mm:ss").toStdString();
+        writeImg->setExifData(writdata);
+
+        try {
+            writeImg->writeMetadata();
+        }
+        catch (const Exiv2::AnyError&) {
+            return false;
+        }
+        return true;
+    }
+    catch (Exiv2::AnyError& e) {
+        std::cerr << "Caught Exiv2 exception '" << e << "'\n";
+        return false;
+    }
+
+    return true;
 }
 
 double Exiv2Extractor::fetchGpsDouble(const Exiv2::ExifData &data, const char *name)

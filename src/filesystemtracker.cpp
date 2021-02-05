@@ -1,25 +1,23 @@
 /*
  * SPDX-FileCopyrightText: (C) 2014 Vishesh Handa <vhanda@kde.org>
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
+ *                             2021 Wang Rui <wangrui@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "filesystemtracker.h"
-
-#include "filesystemimagefetcher.h"
+#include "filesystemmediafetcher.h"
+#include "mediastorage.h"
 
 #include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
-
 #include <QDBusConnection>
-
 #include <QDebug>
 #include <QDir>
 #include <QMimeDatabase>
 #include <QStandardPaths>
-
 #include <KDirNotify>
 #include <kdirwatch.h>
 
@@ -37,13 +35,13 @@ FileSystemTracker::FileSystemTracker(QObject *parent)
     });
     connect(kdirnotify, &org::kde::KDirNotify::FilesAdded, this, &FileSystemTracker::setSubFolder);
     connect(kdirnotify, &org::kde::KDirNotify::FileRenamedWithLocalPath, this, [this](const QString &src, const QString &dst, const QString &) {
+        QMimeDatabase mimeDb;
+        QString mimetype = mimeDb.mimeTypeForFile(src).name();
         removeFile(src);
         slotNewFiles({dst});
     });
 
-    //
     // Real time updates
-    //
     QDBusConnection con = QDBusConnection::sessionBus();
     con.connect(QString(), QLatin1String("/files"), QLatin1String("org.kde"), QLatin1String("changed"), this, SLOT(slotNewFiles(QStringList)));
 
@@ -52,7 +50,7 @@ FileSystemTracker::FileSystemTracker(QObject *parent)
 
 void FileSystemTracker::setupDb()
 {
-    static QString dir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/koko/";
+    static QString dir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/jinggallery/";
     QDir().mkpath(dir);
 
     QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), QStringLiteral("fstracker"));
@@ -62,21 +60,36 @@ void FileSystemTracker::setupDb()
         return;
     }
 
-    if (db.tables().contains("files")) {
-        return;
+    if (MediaStorage::DATA_TABLE_NAME == TABLE_NORMAL_MODE) {
+        if (db.tables().contains(MediaStorage::DATA_TABLE_NAME)) {
+            return;
+        }
     }
 
     QSqlQuery query(db);
+    if (MediaStorage::DATA_TABLE_NAME == TABLE_COMMANDLINE_MODE) {
+        if (db.tables().contains(MediaStorage::DATA_TABLE_NAME)) {
+            query.exec("DROP TABLE "+MediaStorage::DATA_TABLE_NAME);
+            db.transaction();
+        }
+    }
     bool ret =
-        query.exec(QLatin1String("CREATE TABLE files("
-                                 "id INTEGER PRIMARY KEY, "
-                                 "url TEXT NOT NULL UNIQUE)"));
+        query.exec("CREATE TABLE "+MediaStorage::DATA_TABLE_NAME+"("
+                   "id INTEGER PRIMARY KEY, "
+                   "url TEXT NOT NULL UNIQUE,"
+                   "type INTERGER DEFAULT 0)");
     if (!ret) {
         qWarning() << "Could not create files table" << query.lastError().text();
         return;
     }
 
-    ret = query.exec(QLatin1String("CREATE INDEX fileUrl_index ON files (url)"));
+    ret = query.exec("CREATE INDEX fileUrl_index ON "+MediaStorage::DATA_TABLE_NAME+" (url)");
+    if (!ret) {
+        qWarning() << "Could not create tags index" << query.lastError().text();
+        return;
+    }
+
+    ret = query.exec("CREATE INDEX fileType_index ON "+MediaStorage::DATA_TABLE_NAME+" (type)");
     if (!ret) {
         qWarning() << "Could not create tags index" << query.lastError().text();
         return;
@@ -98,37 +111,37 @@ FileSystemTracker::~FileSystemTracker()
     QSqlDatabase::removeDatabase(QStringLiteral("fstracker"));
 }
 
-void FileSystemTracker::slotImageResult(const QString &filePath)
+void FileSystemTracker::slotMediaResult(const QString &filePath, Types::MimeType fileType)
 {
+
     QSqlQuery query(QSqlDatabase::database("fstracker"));
-    query.prepare("SELECT id from files where url = ?");
+    query.prepare("SELECT id from " + MediaStorage::DATA_TABLE_NAME + " where url = ?");
     query.addBindValue(filePath);
     if (!query.exec()) {
-        qDebug() << query.lastError();
+        qWarning() << query.lastError();
         return;
     }
 
     if (!query.next()) {
         QSqlQuery query(QSqlDatabase::database("fstracker"));
-        query.prepare("INSERT into files(url) VALUES (?)");
+        query.prepare("INSERT into " + MediaStorage::DATA_TABLE_NAME + "(url, type) VALUES (?,?)");
         query.addBindValue(filePath);
+        query.addBindValue(fileType);
         if (!query.exec()) {
-            qDebug() << query.lastError();
+            qWarning() << query.lastError();
             return;
         }
-        qDebug() << "ADDED" << filePath;
-        emit imageAdded(filePath);
+        emit mediaAdded(filePath, fileType);
     }
-
     m_filePaths << filePath;
 }
 
 void FileSystemTracker::slotFetchFinished()
 {
     QSqlQuery query(QSqlDatabase::database("fstracker"));
-    query.prepare("SELECT url from files");
+    query.prepare("SELECT url from "+MediaStorage::DATA_TABLE_NAME+"");
     if (!query.exec()) {
-        qDebug() << query.lastError();
+        qWarning() << query.lastError();
         return;
     }
 
@@ -141,18 +154,22 @@ void FileSystemTracker::slotFetchFinished()
     }
 
     QSqlDatabase::database("fstracker").commit();
-
     m_filePaths.clear();
     emit initialScanComplete();
 }
 
 void FileSystemTracker::removeFile(const QString &filePath)
 {
-    qDebug() << "REMOVED" << filePath;
-    emit imageRemoved(filePath);
+    QString realPath = filePath;
+
+    if (filePath.startsWith("file://"))
+        realPath = filePath.mid(7);
+
+    emit mediaRemoved(realPath);
+
     QSqlQuery query(QSqlDatabase::database("fstracker"));
-    query.prepare("DELETE from files where url = ?");
-    query.addBindValue(filePath);
+    query.prepare("DELETE from "+MediaStorage::DATA_TABLE_NAME+" where url = ?");
+    query.addBindValue(realPath);
     if (!query.exec()) {
         qWarning() << query.lastError();
     }
@@ -169,7 +186,9 @@ void FileSystemTracker::slotNewFiles(const QStringList &files)
     for (const QString &file : files) {
         QMimeType mimetype = db.mimeTypeForFile(file);
         if (mimetype.name().startsWith("image/")) {
-            slotImageResult(file);
+            slotMediaResult(file, Types::MimeType::Image);
+        } else if (mimetype.name().startsWith("video/")) {
+            slotMediaResult(file,Types::MimeType::Video);
         }
     }
 
@@ -202,14 +221,12 @@ void FileSystemTracker::setSubFolder(const QString &folder)
 
 void FileSystemTracker::reindexSubFolder()
 {
-    FileSystemImageFetcher *fetcher = new FileSystemImageFetcher(m_subFolder);
-    connect(fetcher, &FileSystemImageFetcher::imageResult, this, &FileSystemTracker::slotImageResult, Qt::QueuedConnection);
-    connect(fetcher, &FileSystemImageFetcher::finished, this, [this, fetcher] {
+    FileSystemMediaFetcher *fetcher = new FileSystemMediaFetcher(m_subFolder);
+    connect(fetcher, &FileSystemMediaFetcher::mediaResult, this, &FileSystemTracker::slotMediaResult, Qt::QueuedConnection);
+    connect(fetcher, &FileSystemMediaFetcher::finished, this, [this, fetcher] {
         slotFetchFinished();
         fetcher->deleteLater();
     }, Qt::QueuedConnection);
-
     fetcher->fetch();
-
     QSqlDatabase::database("fstracker").transaction();
 }

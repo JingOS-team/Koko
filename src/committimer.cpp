@@ -6,7 +6,7 @@
 
 #include "committimer.h"
 
-using namespace Koko;
+using namespace JingGallery;
 
 CommitTimer::CommitTimer(QObject *parent)
     : QObject(parent)

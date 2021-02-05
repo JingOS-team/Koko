@@ -1,5 +1,6 @@
 /*
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
+ * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.0-or-later
  */
@@ -15,17 +16,16 @@ class Types : public QObject
     Q_ENUMS(TimeGroup)
     Q_ENUMS(LocationGroup)
     Q_ENUMS(QueryType)
+    Q_ENUMS(MimeType)
 public:
     Types(QObject *parent);
     ~Types();
 
-    enum ItemTypes { Album = 0, Folder, Image };
-
+    enum ItemTypes { Album = 0, Folder, Media };
+    enum MimeType { Image = 0, Video, All };
     enum TimeGroup { Year = 3, Month, Week, Day };
-
     enum LocationGroup { Country = 7, State, City };
-
-    enum QueryType { LocationQuery = 10, TimeQuery };
+    enum QueryType { LocationQuery = 10, TimeQuery, MimeTypeQuery };
 };
 
 #endif

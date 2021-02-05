@@ -1,125 +1,183 @@
+
+
 /*
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
- *
+ *                             2021 Wang Rui <wangrui@jingos.com>
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
-
 import QtQuick 2.7
 import QtQuick.Controls 2.1 as Controls
 import org.kde.kquickcontrolsaddons 2.0 as KQA
-import org.kde.kirigami 2.12 as Kirigami
-import org.kde.koko 0.1 as Koko
+import org.kde.kirigami 2.15 as Kirigami
+import org.kde.jinggallery 0.2 as Koko
+import "common.js" as CSJ
 
-Item {
+Rectangle {
     id: albumDelegate
-    width: gridView.cellWidth
-    height: gridView.cellHeight
 
-    signal clicked(var mouse)
-    signal pressAndHold(var mouse)
-    signal activated
     property alias containsMouse: albumThumbnailMouseArea.containsMouse
     property QtObject modelData
+    property string mimeType: modelData.mimeType
+    property int duration: modelData.duration
+    property bool itemHoverd
+    property int count
+    property int checkboxHeight: root.height * (CSJ.Left_View_Cancel_Height / CSJ.ScreenHeight)
 
-    Rectangle {
-        anchors {
-            fill: image
-            margins: -1
-        }
-        radius: 2
-        color: Kirigami.Theme.textColor
-        opacity: 0.2
-        visible: modelData.itemType != Koko.Types.Folder
+    signal clicked(var mouse)
+    signal rightClicked(var mouse)
+    signal pressAndHold(var mouse)
+    signal activated
+
+    width: gridView.cellWidth
+    height: gridView.cellHeight
+    color: "transparent"
+
+    function reloadImage() {
+        image.cache = false
+        image.source = ""
     }
-    KQA.QImageItem {
+
+    Image {
         id: image
-        anchors.centerIn: parent
-        width: kokoConfig.iconSize
-        height: width
+
+        property string imageSource: modelData.thumbnailPixmap
+
+        anchors.centerIn: albumDelegate
+        width: parent.width - 15
+        height: parent.height - 15
         smooth: true
-        image: modelData.thumbnail
-        fillMode: KQA.QImageItem.PreserveAspectCrop
+        asynchronous: true
+        sourceSize: Qt.size(width, height)
+        source: (mimeType.search("video") === 0
+                 && imageSource == "") ? "qrc:/assets/video_default.png" : imageSource //+"*"+count//"image://imageProvider/"+ modelData.mediaurl //"file:///home/test/Pictures/abhi-bakshi--adV1rnXsWQ-unsplash.jpg"
+        fillMode: Image.PreserveAspectCrop
+
+        onVisibleChanged: {
+            if (visible) {
+                if (image.source == "") {
+                    image.source = modelData.thumbnailPixmap
+                }
+            }
+        }
     }
 
-    Rectangle {
-        anchors {
-            top: image.top
-            left: image.left
-            right: image.right
-        }
-        visible: textLabel.visible
-        width: image.width
-        height: textLabel.contentHeight + (Kirigami.Units.smallSpacing * 2)
-        Kirigami.Theme.colorSet: Kirigami.Theme.View
-        color: Kirigami.Theme.backgroundColor
-        opacity: 0.8
-    }
-        
-    Controls.Label {
-        id: textLabel
-        anchors {
-            left: image.left
-            right: image.right
-            top: image.top
-            bottom: countRect.visible ? countRect.top : image.bottom
-        }
-        visible: modelData.itemType == Koko.Types.Folder || modelData.itemType == Koko.Types.Album
-        verticalAlignment: Text.AlignTop
-        padding: Kirigami.Units.smallSpacing
-        elide: Text.ElideRight
-        maximumLineCount: 4
-        wrapMode: Text.WordWrap
-        color: Kirigami.Theme.textColor
-        text: modelData.display
-    }
-
-    Rectangle {
-        id: countRect
-        anchors {
-            bottom: image.bottom
-            left: image.left
-            right: image.right
-        }
-        visible: modelData.fileCount && modelData.itemType == Koko.Types.Folder || modelData.itemType == Koko.Types.Album
-        height: countLabel.contentHeight + (Kirigami.Units.smallSpacing * 2)
-        Kirigami.Theme.colorSet: Kirigami.Theme.View
-        color: Kirigami.Theme.backgroundColor
-        opacity: 0.8
-
-        Controls.Label {
-            id: countLabel
-            padding: Kirigami.Units.smallSpacing
-            elide: Text.ElideRight
-            maximumLineCount: 4
-            wrapMode: Text.WordWrap
-            color: Kirigami.Theme.textColor
-            text: i18np("1 Image", "%1 Images", modelData.fileCount)
-        }
-    }
-    
     SelectionDelegateHighlight {
         id: selectionHighlight
-        visible: modelData.selected
+
+        width: parent.width
+        height: parent.height
+        visible: albumDelegate.itemHoverd
     }
 
     MouseArea {
         id: albumThumbnailMouseArea
+
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         anchors.fill: parent
         hoverEnabled: true
-        onPressAndHold: albumDelegate.pressAndHold(mouse)
-        onClicked: albumDelegate.clicked(mouse)
-    }
-    
-    Keys.onPressed: {
-        switch (event.key) {
-            case Qt.Key_Enter:
-            case Qt.Key_Return:
-            case Qt.Key_Space:
-                activated();
-                break;
-            default:
-                break;
+
+        onEntered: {
+            albumDelegate.itemHoverd = true
+        }
+        onExited: {
+            albumDelegate.itemHoverd = false
+        }
+        onPressAndHold: {
+            albumDelegate.pressAndHold(mouse)
+        }
+        onClicked: {
+            if (mouse.button !== Qt.RightButton && itemCheckBox.visible) {
+                gridView.model.toggleSelected(model.index)
+            } else {
+                albumDelegate.clicked(mouse)
+            }
         }
     }
-    
+
+    Keys.onPressed: {
+        switch (event.key) {
+        case Qt.Key_Enter:
+        case Qt.Key_Return:
+        case Qt.Key_Space:
+            activated()
+            break
+        default:
+            break
+        }
+    }
+
+    ItemCheckBox {
+        id: itemCheckBox
+
+        anchors {
+            right: parent.right
+            rightMargin: itemCheckBox.width / 2
+            bottom: parent.bottom
+            bottomMargin: itemCheckBox.width / 4
+        }
+        visible: albumTabBar.bulkIsVisible
+        radiusCB: width / 5
+        enabled: false
+        checked: getSelectMedias()
+        isItem: true
+        width: checkboxHeight
+        csource: checked ? "qrc:/assets/item_check_ok.png" : "qrc:/assets/item_check_default.png"
+
+        function getSelectMedias() {
+            return model.selected
+        }
+    }
+
+    Rectangle {
+        id: videoRect
+
+        anchors {
+            horizontalCenter: parent.horizontalCenter
+            bottom: image.bottom
+        }
+        width: image.width
+        height: width / 7
+        color: "#30000000"
+        visible: getMimeType() && !itemCheckBox.visible
+
+        function getMimeType() {
+            return mimeType.search("video") === 0
+        }
+
+        Image {
+            id: videoImage
+
+            anchors {
+                left: parent.left
+                leftMargin: height / 5
+                verticalCenter: parent.verticalCenter
+            }
+            width: parent.width * CSJ.Item_Video_Width / CSJ.Item_Width
+            height: width
+            source: "qrc:/assets/audio.png"
+        }
+
+        Text {
+            id: timeText
+
+            property int min
+
+            anchors {
+                right: parent.right
+                rightMargin: videoImage.height / 5
+                verticalCenter: parent.verticalCenter
+            }
+            text: getDurationTime()
+            font.pointSize: root.defaultFontSize + 2
+            color: "#FFFFFF"
+
+            function getDurationTime() {
+                var seconds = duration % 60
+                min = duration / 60
+                var secondsS = seconds > 10 ? seconds : "0" + seconds
+                var minS = min > 10 ? min : "0" + min
+                return minS + ":" + secondsS
+            }
+        }
+    }
 }

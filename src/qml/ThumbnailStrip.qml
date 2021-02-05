@@ -12,7 +12,7 @@ import QtQuick.Controls 2.10 as Controls
 import QtGraphicalEffects 1.0 as Effects
 import QtQuick.Layouts 1.3
 import org.kde.kirigami 2.13 as Kirigami
-import org.kde.koko 0.1 as Koko
+import org.kde.jinggallery 0.2 as Koko
 import org.kde.kquickcontrolsaddons 2.0 as KQA
 
 ListView {
@@ -70,7 +70,7 @@ ListView {
         }
     ]
 
-    height: kokoConfig.iconSize
+    height: jingGalleryConfig.iconSize
     orientation: Qt.Horizontal
     snapMode: ListView.SnapOneItem
 
@@ -82,7 +82,7 @@ ListView {
     highlightMoveDuration: Kirigami.Units.longDuration
 
     delegate: AlbumDelegate {
-        width: kokoConfig.iconSize + Kirigami.Units.largeSpacing
+        width: jingGalleryConfig.iconSize + Kirigami.Units.largeSpacing
         height: width
         onClicked: activated()
         onActivated: thumbnailView.activated(model.index)

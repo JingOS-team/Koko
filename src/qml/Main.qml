@@ -1,164 +1,174 @@
 /*
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
+ *                             2021 Wang Rui <wangrui@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
  */
 
-import QtQuick 2.1
-import QtQuick.Controls 2.0 as Controls
-
+import QtQuick 2.15
+import QtQuick.Controls 2.15
 import org.kde.kirigami 2.12 as Kirigami
 import org.kde.kquickcontrolsaddons 2.0 as KQA
-import org.kde.koko 0.1 as Koko
+import org.kde.jinggallery 0.2 as Koko
+import "common.js" as CSJ
 
 Kirigami.ApplicationWindow {
     id: root
+
+    property int defaultFontSize : theme.defaultFont.pointSize
+    property bool isVideo
+    property bool isPhoto
+    property bool isAll
+
+    signal thumbnailChanged(var path)
+    signal deleteItemData();
+    signal filterBy(string value)
+
+    width: root.screen.width
+    height: root.screen.height
+    pageStack.globalToolBar.style: Kirigami.ApplicationHeaderStyle.None
+
+    pageStack.initialPage: AlbumView {
+        id: albumView
+        model: mediasModel
+    }
+
+    onDeleteItemData: {
+        switch(albumTabBar.selectedItem) {
+            case CSJ.TopBarItemAllContent:
+                isVideo = true;
+                isPhoto = true;
+                isAll = false;
+                break;
+            case CSJ.TopBarItemPhotoContent:
+                isVideo = true;
+                isPhoto = false;
+                isAll = true;
+                break;
+            case CSJ.TopBarItemVideoContent:
+                isVideo = false;
+                isPhoto = tue;
+                isAll = true;
+                break;
+        }
+    }
+
+    onThumbnailChanged: {
+        imagesModel.sourceModel.thumbnailChanged(path)
+        mediasModel.sourceModel.thumbnailChanged(path)
+    }
 
     function switchApplicationPage(page) {
         if (!page || pageStack.currentItem == page) {
             return;
         }
-
         pageStack.pop(albumView);
         pageStack.push(page);
         page.forceActiveFocus();
     }
 
-    pageStack.initialPage: AlbumView {
-        id: albumView
-        model: imageFolderModel
-        title: i18n("Folders")
+    Rectangle{
+        id:gradRect
+
+        anchors.top: parent.top
+        width: parent.width
+        height: parent.height/10
+        visible: albumTabBar.visible
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: "#DBFFFFFF"; }
+            GradientStop { position: 1.0; color: "#00FFFFFF"; }
+        }
     }
 
-    pageStack.layers.onDepthChanged: {
-        sideBar.enabled = pageStack.layers.depth < 2;
-        sideBar.drawerOpen = !Kirigami.Settings.isMobile && pageStack.layers.depth < 2;
+    AlbumTabBar {
+        id: albumTabBar
+
+        anchors{
+            top: parent.top
+            topMargin: height/4
+        }
+        visible: albumView.isCurrentPage
+        selectedItem: i18n(CSJ.TopBarItemAllContent)
+
+        Component.onCompleted:{
+            model.append({
+                             title:i18n(CSJ.TopBarItemAllContent)
+                         });
+            model.append({
+                             title:i18n(CSJ.TopBarItemPhotoContent)
+                         });
+            model.append({
+                             title:i18n(CSJ.TopBarItemVideoContent)
+                         });
+        }
     }
-
-    globalDrawer: Sidebar {
-        id: sideBar
-
-        onFilterBy: {
-            pageStack.pop(albumView)
-            albumView.title = i18n(value)
-            previouslySelectedAction.checked = false
-            
-            switch( value){
-                case "Countries": { 
-                    albumView.model = imageLocationModelCountry;
-                    imageListModel.locationGroup = Koko.Types.Country;
-                    break;
+    
+    onFilterBy: {
+        switch(value) {
+            case CSJ.TopBarItemPhotoContent: {
+                if (isPhoto) {
+                    imagesModel.sourceModel.mimeType = Koko.Types.Image;
                 }
-                case "States": { 
-                    albumView.model = imageLocationModelState;
-                    imageListModel.locationGroup = Koko.Types.State;
-                    break;
+                albumView.model = imagesModel;
+                mediaListModel.locationGroup = -1;
+                mediaListModel.timeGroup = -1;
+                mediaListModel.mimeType = Koko.Types.Image;
+                break;
+            }
+            case CSJ.TopBarItemVideoContent: {
+                if (isVideo) {
+                    isVideo = false;
+                    videosModel.sourceModel.mimeType = Koko.Types.Video;
                 }
-                case "Cities": {
-                    albumView.model = imageLocationModelCity;
-                    imageListModel.locationGroup = Koko.Types.City;
-                    break;
+                albumView.model = videosModel;
+                mediaListModel.locationGroup = -1;
+                mediaListModel.timeGroup = -1;
+                mediaListModel.mimeType = Koko.Types.Video;
+                break;
+            }
+            case CSJ.TopBarItemAllContent: {
+                if (isAll) {
+                    isAll = false;
+                    mediasModel.sourceModel.mimeType = Koko.Types.All;
                 }
-                case "Years": {
-                    albumView.model = imageTimeModelYear; 
-                    imageListModel.timeGroup = Koko.Types.Year;
-                    break;
-                }
-                case "Months": {
-                    albumView.model = imageTimeModelMonth;
-                    imageListModel.timeGroup = Koko.Types.Month;
-                    break;
-                }
-                case "Weeks": {
-                    albumView.model = imageTimeModelWeek;
-                    imageListModel.timeGroup = Koko.Types.Week;
-                    break;
-                }
-                case "Days": { 
-                    albumView.model = imageTimeModelDay; 
-                    imageListModel.timeGroup = Koko.Types.Day;
-                    break;
-                }
-                case "Folders": { 
-                    albumView.model = imageFolderModel; 
-                    imageListModel.locationGroup = -1;
-                    imageListModel.timeGroup = -1;
-                    break; 
-                }
+                albumView.model = mediasModel;
+                mediaListModel.locationGroup = -1;
+                mediaListModel.timeGroup = -1;
+                mediaListModel.mimeType = Koko.Types.All;
+                break;
             }
         }
-        Kirigami.BasicListItem {
-            text: i18n("About")
-            onClicked: switchApplicationPage(aboutPage)
+    }
+
+    Koko.MediaMimeTypeModel {
+        id:mmt
+        mimeType: Koko.Types.All
+    }
+    
+    Koko.SortModel {
+        id: mediasModel
+        sourceModel: Koko.MediaMimeTypeModel {
+            mimeType: Koko.Types.All
         }
     }
 
     Koko.SortModel {
-        id: imageFolderModel
-        sourceModel: Koko.ImageFolderModel {
-            url: ""
-        }
-        /*
-         * filterRole is an Item property exposed by the QSortFilterProxyModel
-         */
-        filterRole: Koko.Roles.MimeTypeRole
-    }
-    
-    Koko.SortModel {
-        id: imageTimeModelYear
-        sourceModel: Koko.ImageTimeModel {
-            group: Koko.Types.Year
-        }
-        sortRoleName: "date"
-    }
-    
-    Koko.SortModel {
-        id: imageTimeModelMonth
-        sourceModel: Koko.ImageTimeModel {
-            group: Koko.Types.Month
-        }
-        sortRoleName: "date"
-    }
-    
-    Koko.SortModel {
-        id: imageTimeModelWeek
-        sourceModel: Koko.ImageTimeModel {
-            group: Koko.Types.Week
-        }
-        sortRoleName: "date"
-    }
-    
-    Koko.SortModel {
-        id: imageTimeModelDay
-        sourceModel: Koko.ImageTimeModel {
-            group: Koko.Types.Day
-        }
-        sortRoleName: "date"
-    }
-    
-    Koko.SortModel {
-        id: imageLocationModelCountry
-        sourceModel: Koko.ImageLocationModel {
-            group: Koko.Types.Country
+        id: imagesModel
+        sourceModel: Koko.MediaMimeTypeModel {
+            mimeType: Koko.Types.Image
         }
     }
-        
+
     Koko.SortModel {
-        id: imageLocationModelState
-        sourceModel: Koko.ImageLocationModel {
-            group: Koko.Types.State
+        id: videosModel
+        sourceModel: Koko.MediaMimeTypeModel {
+            mimeType: Koko.Types.Video
         }
     }
     
-    Koko.SortModel {
-        id: imageLocationModelCity
-        sourceModel: Koko.ImageLocationModel {
-            group: Koko.Types.City
-        }
-    }
-    
-    Koko.ImageListModel {
-        id: imageListModel
+    Koko.MediaListModel {
+        id: mediaListModel
+        mimeType: Koko.Types.All
     }
     
     Koko.NotificationManager {
@@ -171,6 +181,6 @@ Kirigami.ApplicationWindow {
 
     Kirigami.AboutPage {
         id: aboutPage
-        aboutData: kokoAboutData
+        aboutData: jinggalleryAboutData
     }
 }

@@ -136,8 +136,8 @@ Kirigami.GlobalDrawer {
         Layout.rightMargin: Kirigami.Units.smallSpacing
         from: Kirigami.Units.iconSizes.medium
         to: Kirigami.Units.iconSizes.enormous
-        value: kokoConfig.iconSize
-        onMoved: kokoConfig.iconSize = value;
+        value: jingGalleryConfig.iconSize
+        onMoved: jingGalleryConfig.iconSize = value;
     }
 
     Component.onCompleted: {

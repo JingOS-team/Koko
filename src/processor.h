@@ -1,5 +1,6 @@
 /*
  * SPDX-FileCopyrightText: (C) 2014  Vishesh Handa <me@vhanda.in>
+ * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
@@ -9,11 +10,12 @@
 
 #include <QObject>
 #include <QStringList>
-
+#include <QPair>
 #include "committimer.h"
 #include "reversegeocoder.h"
+#include "types.h"
 
-namespace Koko
+namespace JingGallery
 {
 class Processor : public QObject
 {
@@ -39,7 +41,7 @@ signals:
     void finishedChanged();
 
 public slots:
-    void addFile(const QString &filePath);
+    void addFile(const QString &filePath, Types::MimeType type);
     void removeFile(const QString &filePath);
     void initialScanCompleted();
 
@@ -48,7 +50,7 @@ private slots:
     void slotFinished();
 
 private:
-    QStringList m_files;
+    QList<QPair<Types::MimeType, QString>> m_files;
     int m_numFiles;
     bool m_processing;
 

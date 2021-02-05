@@ -12,7 +12,6 @@ import org.kde.kirigami 2.1 as Kirigami
 
 Kirigami.OverlaySheet {
     id: window
-   // focus: true
     property alias inputData: view.inputData
     property bool running: false
     signal finished(var output, int error, string message)
@@ -20,7 +19,7 @@ Kirigami.OverlaySheet {
     rightPadding: 0
     
     onSheetOpenChanged: {
-        if(!sheetOpen) {
+        if (!sheetOpen) {
             view.reset()
         }
     }

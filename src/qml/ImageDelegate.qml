@@ -1,29 +1,49 @@
+
+
 /*
  * SPDX-FileCopyrightText: (C) 2015 Vishesh Handa <vhanda@kde.org>
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
  * SPDX-FileCopyrightText: (C) 2017 Marco Martin <mart@kde.org>
+ *                             2021 Wang Rui <wangrui@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
  */
-
 import QtQuick 2.12
 import QtQuick.Window 2.2
 import QtQuick.Controls 2.10 as Controls
 import QtGraphicalEffects 1.0 as Effects
 import QtQuick.Layouts 1.3
 import org.kde.kirigami 2.13 as Kirigami
-import org.kde.koko 0.1 as Koko
+import org.kde.jinggallery 0.2 as Koko
 import org.kde.kquickcontrolsaddons 2.0 as KQA
 
 Flickable {
     id: flick
+
     property string currentImageSource
+    property int refresh
+    property string mimeType
+    property int duration
+    property string imageTime
+
     contentWidth: width
     contentHeight: height
     boundsBehavior: Flickable.StopAtBounds
     boundsMovement: Flickable.StopAtBounds
     interactive: contentWidth > width || contentHeight > height
     clip: true
+
+    signal backToPage
+    signal imageClicked
+
+    onBackToPage: {
+        image.cache = true
+    }
+
+    onRefreshChanged: {
+        image.cache = false
+        image.source = currentImageSource
+    }
 
     Controls.ScrollBar.vertical: Controls.ScrollBar {
         visible: !applicationWindow().controlsVisible
@@ -33,11 +53,12 @@ Flickable {
     }
 
     PinchArea {
-        width: Math.max(flick.contentWidth, flick.width)
-        height: Math.max(flick.contentHeight, flick.height)
 
         property real initialWidth
         property real initialHeight
+
+        width: Math.max(flick.contentWidth, flick.width)
+        height: Math.max(flick.contentHeight, flick.height)
 
         onPinchStarted: {
             initialWidth = flick.contentWidth
@@ -48,31 +69,36 @@ Flickable {
             // adjust content pos due to drag
             flick.contentX += pinch.previousCenter.x - pinch.center.x
             flick.contentY += pinch.previousCenter.y - pinch.center.y
-
             // resize content
-            flick.resizeContent(Math.max(root.width*0.7, initialWidth * pinch.scale), Math.max(root.height*0.7, initialHeight * pinch.scale), pinch.center)
+            flick.resizeContent(Math.max(root.width * 0.7,
+                                         initialWidth * pinch.scale),
+                                Math.max(root.height * 0.7,
+                                         initialHeight * pinch.scale),
+                                pinch.center)
         }
 
         onPinchFinished: {
             // Move its content within bounds.
-            if (flick.contentWidth < root.width ||
-                flick.contentHeight < root.height) {
-                zoomAnim.x = 0;
-                zoomAnim.y = 0;
-                zoomAnim.width = root.width;
-                zoomAnim.height = root.height;
-                zoomAnim.running = true;
+            if (flick.contentWidth < root.width
+                    || flick.contentHeight < root.height) {
+                zoomAnim.x = 0
+                zoomAnim.y = 0
+                zoomAnim.width = root.width
+                zoomAnim.height = root.height
+                zoomAnim.running = true
             } else {
-                flick.returnToBounds();
+                flick.returnToBounds()
             }
         }
 
         ParallelAnimation {
             id: zoomAnim
+
             property real x: 0
             property real y: 0
             property real width: root.width
             property real height: root.height
+
             NumberAnimation {
                 target: flick
                 property: "contentWidth"
@@ -109,70 +135,112 @@ Flickable {
 
         Image {
             id: image
+
             width: flick.contentWidth
             height: flick.contentHeight
             fillMode: Image.PreserveAspectFit
             source: currentImageSource
             autoTransform: true
             asynchronous: true
+
             onStatusChanged: {
                 if (status === Image.Ready && listView.currentIndex === index) {
-                    imgColors.update();
+                    console.log("status changed")
+                    imgColors.update()
                 }
             }
+
+            Controls.Label {
+                id: textLabe
+
+                anchors {
+                    right: image.right
+                    bottom: image.bottom
+                }
+                height: Kirigami.Units * 2
+                visible: mimeType.startsWith("video/")
+                verticalAlignment: Text.AlignTop
+                padding: Kirigami.Units.smallSpacing
+                elide: Text.ElideRight
+                wrapMode: Text.WordWrap
+                color: Kirigami.Theme.textColor
+                text: duration
+            }
+
             Timer {
                 id: doubleClickTimer
                 interval: 150
-                onTriggered: applicationWindow().controlsVisible = !applicationWindow().controlsVisible
+                onTriggered: applicationWindow(
+                                 ).controlsVisible = !applicationWindow(
+                                 ).controlsVisible
             }
+
             MouseArea {
                 anchors.fill: parent
+
                 onClicked: {
+                    imageClicked()
                     contextDrawer.drawerOpen = false
-                    doubleClickTimer.restart();
+                    doubleClickTimer.restart()
                 }
+
                 onDoubleClicked: {
-                    doubleClickTimer.running = false;
-                    applicationWindow().controlsVisible = false;
+                    doubleClickTimer.running = false
+                    applicationWindow().controlsVisible = false
                     if (flick.interactive) {
-                        zoomAnim.x = 0;
-                        zoomAnim.y = 0;
-                        zoomAnim.width = root.width;
-                        zoomAnim.height = root.height;
-                        zoomAnim.running = true;
+                        zoomAnim.x = 0
+                        zoomAnim.y = 0
+                        zoomAnim.width = root.width
+                        zoomAnim.height = root.height
+                        zoomAnim.running = true
                     } else {
-                        zoomAnim.x = mouse.x * 2;
-                        zoomAnim.y = mouse.y *2;
-                        zoomAnim.width = root.width * 3;
-                        zoomAnim.height = root.height * 3;
-                        zoomAnim.running = true;
+                        zoomAnim.x = mouse.x * 2
+                        zoomAnim.y = mouse.y * 2
+                        zoomAnim.width = root.width * 3
+                        zoomAnim.height = root.height * 3
+                        zoomAnim.running = true
                     }
                 }
+
                 onWheel: {
                     if (wheel.modifiers & Qt.ControlModifier) {
                         if (wheel.angleDelta.y != 0) {
-                            var factor = 1 + wheel.angleDelta.y / 600;
-                            zoomAnim.running = false;
+                            var factor = 1 + wheel.angleDelta.y / 600
+                            zoomAnim.running = false
 
-                            zoomAnim.width = Math.min(Math.max(root.width, zoomAnim.width * factor), root.width * 4);
-                            zoomAnim.height = Math.min(Math.max(root.height, zoomAnim.height * factor), root.height * 4);
+                            zoomAnim.width = Math.min(
+                                        Math.max(root.width,
+                                                 zoomAnim.width * factor),
+                                        root.width * 4)
+                            zoomAnim.height = Math.min(
+                                        Math.max(root.height,
+                                                 zoomAnim.height * factor),
+                                        root.height * 4)
 
                             //actual factors, may be less than factor
-                            var xFactor = zoomAnim.width / flick.contentWidth;
-                            var yFactor = zoomAnim.height / flick.contentHeight;
+                            var xFactor = zoomAnim.width / flick.contentWidth
+                            var yFactor = zoomAnim.height / flick.contentHeight
 
-                            zoomAnim.x = flick.contentX * xFactor + (((wheel.x - flick.contentX) * xFactor) - (wheel.x - flick.contentX))
-                            zoomAnim.y = flick.contentY * yFactor + (((wheel.y - flick.contentY) * yFactor) - (wheel.y - flick.contentY))
-                            zoomAnim.running = true;
-
+                            zoomAnim.x = flick.contentX * xFactor
+                                    + (((wheel.x - flick.contentX) * xFactor)
+                                       - (wheel.x - flick.contentX))
+                            zoomAnim.y = flick.contentY * yFactor
+                                    + (((wheel.y - flick.contentY) * yFactor)
+                                       - (wheel.y - flick.contentY))
+                            zoomAnim.running = true
                         } else if (wheel.pixelDelta.y != 0) {
-                            flick.resizeContent(Math.min(Math.max(root.width, flick.contentWidth + wheel.pixelDelta.y), root.width * 4),
-                                                Math.min(Math.max(root.height, flick.contentHeight + wheel.pixelDelta.y), root.height * 4),
-                                                wheel);
+                            flick.resizeContent(
+                                        Math.min(Math.max(
+                                                     root.width, flick.contentWidth
+                                                     + wheel.pixelDelta.y), root.width
+                                                 * 4), Math.min(
+                                            Math.max(root.height,
+                                                     flick.contentHeight + wheel.pixelDelta.y),
+                                            root.height * 4), wheel)
                         }
                     } else {
-                        flick.contentX += wheel.pixelDelta.x;
-                        flick.contentY += wheel.pixelDelta.y;
+                        flick.contentX += wheel.pixelDelta.x
+                        flick.contentY += wheel.pixelDelta.y
                     }
                 }
             }

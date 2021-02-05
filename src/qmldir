@@ -1,2 +1,2 @@
-module org.kde.koko
-plugin kokoqmlplugin
+module org.kde.jinggallery
+plugin jinggalleryqmlplugin

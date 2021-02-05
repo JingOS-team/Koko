@@ -1,96 +1,85 @@
 /*
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
- *
+ *                              2021 Wang Rui <wangrui@jingos.com>
  * SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
  */
 
-import QtQuick 2.7
+import QtQuick 2.15
 import QtQuick.Controls 2.1 as Controls
-
 import org.kde.kirigami 2.12 as Kirigami
-import org.kde.koko 0.1 as Koko
+import org.kde.jinggallery 0.2 as Koko
+import "common.js" as CSJ
 
-Kirigami.ScrollablePage {
+Rectangle {
     id: page
-    
+
     property alias model: gridView.model
+    property var grideSortModel
+    property bool isPhotoItem : albumTabBar.bulkIsVisible ? photoItemCount > 0 : rightMenuPhoto
+    property bool isVideoItem : albumTabBar.bulkIsVisible ? videoItemCount > 0 :rightMenuVideo
+    property bool rightMenuPhoto
+    property bool rightMenuVideo
+    property int itemCheckSelectCount : model.checkSelectCount
+    property int photoItemCount : model.photoSelectCount
+    property int videoItemCount : model.videoSelectCount
+    property int gridViewCount:gridView.count
+    property string commandLinePathString:CommandLineInto
+
     signal collectionSelected(QtObject selectedModel, string cover)
     signal folderSelected(QtObject selectedModel, string cover)
-    
-    keyboardNavigationEnabled: true
+    signal backToPage()
+    signal deleteItemClicked()
+    signal allChecked(var status)
+
     focus: true
+
+    onDeleteItemClicked: {
+        gridView.model.deleteSelection()
+    }
+    onAllChecked: {
+        if (status) {
+            gridView.model.selectAll()
+        } else {
+            gridView.model.clearSelections();
+        }
+    }
+
+    onBackToPage: {
+        albumTabBar.visible = true
+        actionBar.visible = false
+    }
+
+    AlbumSelectionActionBar {
+        id: actionBar
+
+        anchors {
+            left: parent.left
+            leftMargin: parent.width / 2
+            bottom: parent.bottom
+            bottomMargin: Kirigami.Units.gridUnit * 2
+        }
+        model: gridView.model
+        visible: false
+    }
 
     states: [
         State {
             name: "browsing"
-            when: !model.hasSelectedImages
+            when: !model.hasSelectedMedias
         },
         State {
             name: "selecting"
-            when: model.hasSelectedImages && Kirigami.Settings.tabletMode
+            when: model.hasSelectedMedias // && Kirigami.Settings.tabletMode
         }
     ]
 
-    actions {
-        main: Kirigami.Action {
-            iconName: "edit-select-none"
-            text: i18n("Deselect All")
-            tooltip: i18n("De-selects all the selected images")
-            enabled: model.hasSelectedImages
-            visible: model.hasSelectedImages && Kirigami.Settings.tabletMode
-            onTriggered: model.clearSelections()
-        }
-        contextualActions: [
-            Kirigami.Action {
-                iconName: "edit-select-all"
-                text: i18n("Select All")
-                tooltip: i18n("Selects all the images in the current view")
-                enabled: model.containImages
-                onTriggered: model.selectAll()
-            },
-            Kirigami.Action {
-                iconName: "edit-select-none"
-                text: i18n("Deselect All")
-                tooltip: i18n("De-selects all the selected images")
-                enabled: model.hasSelectedImages
-                onTriggered: model.clearSelections()
-            },
-            Kirigami.Action {
-                iconName: "emblem-shared-symbolic"
-                text: i18n("Share")
-                tooltip: i18n("Share the selected images")
-                enabled: model.hasSelectedImages
-                onTriggered: {
-                    shareMenu.open();
-                    shareMenu.inputData = {
-                        "urls": model.selectedImages(),
-                        "mimeType": "image/"
-                    }
-                }
-            },
-            Kirigami.Action {
-                iconName: "group-delete"
-                text: i18n("Delete Selection")
-                tooltip: i18n("Move selected items to trash")
-                enabled: model.hasSelectedImages
-                onTriggered: model.deleteSelection()
-            }
-            
-        ]
-    }
-
-    background: Rectangle {
-        Kirigami.Theme.colorSet: Kirigami.Theme.View
-        color: Kirigami.Theme.backgroundColor
-    }
-
     Keys.onPressed: {
         switch (event.key) {
-            case Qt.Key_Escape:
-                gridView.model.clearSelections()
-                break;
-            default:
-                break;
+        case Qt.Key_Escape:
+            gridView.model.clearSelections()
+            break;
+        default:
+            break;
         }
     }
 
@@ -99,106 +88,186 @@ Kirigami.ScrollablePage {
 
         inputData: {
             "urls": [],
-            "mimeType": ["image/"]
+            "mimeType": ["image/", "video/"]
         }
         onFinished: {
             if (error==0 && output.url !== "") {
-                console.assert(output.url !== undefined);
                 var resultUrl = output.url;
-                console.log("Received", resultUrl)
                 notificationManager.showNotification( true, resultUrl);
                 clipboard.content = resultUrl;
             } else {
                 notificationManager.showNotification( false);
             }
         }
-    }  
+    }
+    onVisibleChanged: {
+        if (visible) {
+            gridView.isDeleteClicked = false
+        }
+    }
+
+    onCollectionSelected: pageStack.push( Qt.resolvedUrl("AlbumView.qml"), { "model": selectedModel, "globalToolBarStyle": Kirigami.ApplicationHeaderStyle.None})
+    onFolderSelected: pageStack.push( Qt.resolvedUrl("AlbumView.qml"), { "model": selectedModel, "globalToolBarStyle": Kirigami.ApplicationHeaderStyle.None})
 
     GridView {
         id: gridView
-        //FIXME: right now if those two objects are out of this, the whole page breaks
+
+        property bool isDeleteClicked
+        property int clickIndex
+        property real widthToApproximate: (applicationWindow().wideScreen ? applicationWindow().pageStack.defaultColumnWidth : page.width) - (1||Kirigami.Settings.tabletMode ? Kirigami.Units.gridUnit : 0)
+
+        anchors{
+            top: parent.top
+            topMargin:  gridView.contentHeight > parent.height ? 0 : albumTabBar.height*5/4
+            left: parent.left
+            right: parent.right
+            leftMargin: height/120
+        }
+        width: parent.width
+        height: parent.height
+        cellWidth: (width-height/120)/7
+        cellHeight: cellWidth-cellWidth/6
+        highlightMoveDuration: 0
+        cacheBuffer: root.height*5
+        keyNavigationEnabled: true
+        currentIndex: count > 0 ? count-1 : 0
+
         Koko.SortModel {
             id: sortedListModel
         }
-        Koko.ImageFolderModel {
-            id: imageFolderModel
+
+        function reloadSource(reloadIndex) {
+            gridView.itemAtIndex(reloadIndex).reloadImage();
         }
 
-        keyNavigationEnabled: true
+        EditMenuView{
+            id:editMenu
 
-        property real widthToApproximate: (applicationWindow().wideScreen ? applicationWindow().pageStack.defaultColumnWidth : page.width) - (1||Kirigami.Settings.tabletMode ? Kirigami.Units.gridUnit : 0)
+            hasSelectItem:itemCheckSelectCount > 0
+            isbulkVisible: albumTabBar.bulkIsVisible
+            tabSelectText:albumTabBar.selectedItem
+            selectCount : itemCheckSelectCount
 
-        cellWidth: Math.floor(width/Math.floor(width/(kokoConfig.iconSize + Kirigami.Units.largeSpacing * 2)))
-
-        cellHeight: kokoConfig.iconSize + Kirigami.Units.largeSpacing * 2
-
-        topMargin: Kirigami.Units.gridUnit
-
-        highlightMoveDuration: 0
-        highlight: Item {
-            Rectangle {
-                anchors.centerIn: parent
-                width: Math.min(parent.width, parent.height)
-                height: width
-                color: Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.3)
-                border.color: Kirigami.Theme.highlightColor
-                radius: 2
+            onBulkClicked: {
+                albumTabBar.bulkClick()
             }
+            onDeleteClicked: {
+                if (albumTabBar.bulkIsVisible) {
+                    deleteItemClicked()
+                    albumTabBar.cancelBulk()
+                } else {
+                    root.deleteItemData()
+                    gridView.model.deleteItemByModeIndex(gridView.clickIndex)
+                }
+            }
+            onSaveClicked: {}
         }
-        
+
         delegate: AlbumDelegate {
             id: delegate
+
             modelData: model
+
+            GridView.onRemove: SequentialAnimation {
+                PropertyAction { target: delegate; property: "GridView.delayRemove"; value: true }
+                NumberAnimation { target: delegate; property: "scale"; to: 0; duration: 250; easing.type: Easing.InOutQuad }
+                PropertyAction { target: delegate; property: "GridView.delayRemove"; value: false }
+            }
+
+            Component.onCompleted: {
+                if (commandLinePathString !== "") {
+                    var commandLineIndex = gridView.model.sourceModel.findIndex(commandLinePathString);
+                    if (commandLineIndex === index) {
+                        commandLinePathString = ""
+                        applicationWindow().pageStack.layers.push(Qt.resolvedUrl("ImageViewer.qml"), {
+                                                                      startIndex: commandLineIndex,
+                                                                      imageviewModel: page.model,
+                                                                      gradviewModel: page.model,
+                                                                      imageGridView:gridView
+                                                                  })
+                        albumTabBar.visible = false
+                    }
+                }
+            }
+
             onClicked: {
-                if (page.state == "selecting" || (mouse.modifiers & Qt.ControlModifier ) && (model.itemType == Koko.Types.Image)) {
-                    gridView.model.toggleSelected(model.index)
+                gridView.clickIndex = model.index
+                gridView.currentIndex = model.index;
+
+                if (mouse.button ===  Qt.RightButton) {
+                    if (mimeType.search("video") === 0) {
+                        albumView.rightMenuVideo = true
+                    } else {
+                        albumView.rightMenuPhoto = true
+                    }
+                    if (!editMenu.opened) {
+                        var jx = mapToItem(page,mouse.x,mouse.y)
+                        editMenu.mouseX = jx.x
+                        editMenu.mouseY = jx.y
+                        if (albumTabBar.bulkIsVisible) {
+                            editMenu.rmBulkAction()
+                        } else {
+                            editMenu.addBulkAction()
+                        }
+                        editMenu.popup()
+                    }
                 } else {
-                    activated();
+                    if (page.state == "selecting") {
+                        gridView.model.toggleSelected(model.index)
+                    }
+                    else {
+                        activated();
+                    }
                 }
             }
             onPressAndHold: {
-                gridView.model.toggleSelected(model.index)
+                gridView.clickIndex = model.index
+                gridView.currentIndex = model.index;
+
+                if (!editMenu.opened) {
+                    var jx = mapToItem(page,mouse.x,mouse.y)
+                    editMenu.mouseX = jx.x
+                    editMenu.mouseY = jx.y
+                    if (albumTabBar.bulkIsVisible) {
+                        editMenu.rmBulkAction()
+                    } else {
+                        editMenu.addBulkAction()
+                    }
+                    editMenu.popup(page,jx.x,jx.y)
+                }
             }
+
             onActivated: {
                 gridView.model.clearSelections()
                 gridView.currentIndex = model.index;
+                gridView.clickIndex = model.index
+
                 switch( model.itemType) {
                     case Koko.Types.Album: {
-                        imageListModel.query = imageListModel.queryForIndex( model.sourceIndex)
-                        sortedListModel.sourceModel = imageListModel
+                        mediaListModel.query = mediaListModel.queryForIndex( model.sourceIndex)
+                        sortedListModel.sourceModel = mediaListModel
                         collectionSelected( sortedListModel, model.display)
                         break;
                     }
                     case Koko.Types.Folder: {
                         imageFolderModel.url = model.imageurl
-                        sortedListModel.sourceModel = imageFolderModel
+                        sortedListModel.sourceModel = mediasModel
                         folderSelected( sortedListModel, model.display)
                         break;
                     }
-                    case Koko.Types.Image: {
+                    case Koko.Types.Media: {
+                        albumTabBar.visible = false
                         applicationWindow().pageStack.layers.push(Qt.resolvedUrl("ImageViewer.qml"), {
-                            startIndex: page.model.index(gridView.currentIndex, 0),
-                            imagesModel: page.model
-                        })
+                                                                    startIndex: gridView.currentIndex,//page.model.index(gridView.currentIndex, 0),//sortedListModel.index
+                                                                    imageviewModel: page.model,
+                                                                    gradviewModel: page.model,
+                                                                    imageGridView:gridView
+                                                                })
                         break;
                     }
                     default: {
                         console.log("Unknown")
                         break;
-                    }
-                }
-            }
-            SelectionButton {
-                id: selectionButton
-                opacity: ( delegate.containsMouse || page.state == "selecting") && !(model.itemType == Koko.Types.Folder || model.itemType == Koko.Types.Album)
-
-                anchors.top: delegate.top
-                anchors.left: delegate.left
-
-                Behavior on opacity {
-                    OpacityAnimator {
-                        duration: Kirigami.Units.longDuration
-                        easing.type: Easing.InOutQuad
                     }
                 }
             }
@@ -211,7 +280,4 @@ Kirigami.ScrollablePage {
             width: parent.width - (Kirigami.Units.largeSpacing * 4)
         }
     }
-    
-    onCollectionSelected: pageStack.push( Qt.resolvedUrl("AlbumView.qml"), { "model": selectedModel, "title": i18n(cover)})
-    onFolderSelected: pageStack.push( Qt.resolvedUrl("AlbumView.qml"), { "model": selectedModel, "title": i18n(cover)})
 }

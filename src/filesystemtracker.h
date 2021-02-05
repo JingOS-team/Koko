@@ -1,6 +1,7 @@
 /*
  * SPDX-FileCopyrightText: (C) 2014 Vishesh Handa <vhanda@kde.org>
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
+ * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
@@ -10,6 +11,7 @@
 
 #include <QObject>
 #include <QSet>
+#include "types.h"
 
 class FileSystemTracker : public QObject
 {
@@ -28,17 +30,18 @@ public:
     void setupDb();
 
 signals:
-    void imageAdded(const QString &filePath);
-    void imageRemoved(const QString &filePath);
+    void mediaAdded(const QString &filePath, Types::MimeType type);
+    void mediaRemoved(const QString &filePath);
     void initialScanComplete();
     void subFolderChanged();
 
 protected:
     void removeFile(const QString &filePath);
+    void addContent(const QString &filePath, Types::MimeType type);
 
 private slots:
     void slotNewFiles(const QStringList &files);
-    void slotImageResult(const QString &filePath);
+    void slotMediaResult(const QString &filePath, Types::MimeType type);
     void slotFetchFinished();
 
 private:

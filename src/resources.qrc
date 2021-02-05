@@ -13,6 +13,48 @@
         <file>qml/ShareDialog.qml</file>
         <file>qml/Sidebar.qml</file>
         <file>qml/ThumbnailStrip.qml</file>
+        <file>qml/AlbumTabBar.qml</file>
+        <file>qml/AlbumSelectionActionBar.qml</file>
+        <file>qml/BasicResizeHandle.qml</file>
+        <file>qml/common.js</file>
+        <file>qml/EditMenuView.qml</file>
+        <file>qml/BulkView.qml</file>
+        <file>qml/ItemCheckBox.qml</file>
+        <file>qml/ImageEditTitle.qml</file>
+        <file>qml/CropView.qml</file>
+        <file>qml/VagueBackground.qml</file>
+        <file>qml/BasicResizeRightHandle.qml</file>
+        <file>qml/AlertDialog.qml</file>
+        <file>qml/imagethread.mjs</file>
+    </qresource>
+    <qresource prefix="/assets">
+        <file alias="all.png">assets/all.png</file>
+        <file alias="audio.png">assets/audio.png</file>
+        <file alias="pic.png">assets/pic.png</file>
+        <file alias="video.png">assets/video.png</file>
+        <file alias="edit_savetofile.png">assets/edit_savetofile.png</file>
+        <file alias="edit_rename.png">assets/edit_rename.png</file>
+        <file alias="edit_delete.png">assets/edit_delete.png</file>
+        <file alias="edit_bulk.png">assets/edit_bulk.png</file>
+        <file alias="check_default.png">assets/check_default.png</file>
+        <file alias="check_ok.png">assets/check_ok.png</file>
+        <file alias="item_check_ok.png">assets/item_check_ok.png</file>
+        <file alias="cancel.png">assets/cancel.png</file>
+        <file alias="delete_default.png">assets/delete_default.png</file>
+        <file alias="folders_default.png">assets/folders_default.png</file>
+        <file alias="item_check_default.png">assets/item_check_default.png</file>
+        <file alias="crop.png">assets/crop.png</file>
+        <file alias="delete.png">assets/delete.png</file>
+        <file alias="magic.png">assets/magic.png</file>
+        <file alias="rotate.png">assets/rotate.png</file>
+        <file alias="back.png">assets/back.png</file>
+        <file alias="done.png">assets/done.png</file>
+        <file alias="crop_delete.png">assets/crop_delete.png</file>
+        <file alias="edit_audio.png">assets/edit_audio.png</file>
+        <file alias="select_one.svg">assets/select_one.svg</file>
+        <file alias="leftarrow.png">assets/leftarrow.png</file>
+        <file alias="rightarrow.png">assets/rightarrow.png</file>
+        <file alias="video_default.png">assets/video_default.png</file>
+        <file alias="crop_rotate.png">assets/crop_rotate.png</file>
     </qresource>
 </RCC>
-

@@ -7,7 +7,7 @@
 import QtQuick 2.7
 
 import org.kde.kirigami 2.1 as Kirigami
-import org.kde.koko 0.1 as Koko
+import org.kde.jinggallery 0.2 as Koko
 
 Kirigami.Icon {
     id: iconArea
@@ -21,7 +21,7 @@ Kirigami.Icon {
         anchors.fill: parent
         state: "add"
         onClicked: { 
-            if(iconMouseArea.state == "add") {
+            if (iconMouseArea.state == "add") {
                 gridView.model.setSelected(model.index)
             } else {
                 gridView.model.toggleSelected(model.index)

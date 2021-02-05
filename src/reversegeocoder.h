@@ -1,5 +1,6 @@
 /*
  * SPDX-FileCopyrightText: (C) 2015 Vishesh Handa <me@vhanda.in>
+ * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
@@ -10,7 +11,7 @@
 #include <QVariantMap>
 #include <kdtree.h>
 
-namespace Koko
+namespace JingGallery
 {
 class ReverseGeoCoder
 {

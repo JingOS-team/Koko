@@ -10,7 +10,7 @@
 #include <QObject>
 #include <QTimer>
 
-namespace Koko
+namespace JingGallery
 {
 class CommitTimer : public QObject
 {

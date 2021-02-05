@@ -1,5 +1,6 @@
 /*
  * SPDX-FileCopyrightText: (C) 2015 Vishesh Handa <vhanda@kde.org>
+ * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
@@ -9,8 +10,9 @@
 
 #include <QObject>
 #include <QRunnable>
+#include "types.h"
 
-namespace Koko
+namespace JingGallery
 {
 class ReverseGeoCoder;
 
@@ -18,7 +20,7 @@ class ImageProcessorRunnable : public QObject, public QRunnable
 {
     Q_OBJECT
 public:
-    ImageProcessorRunnable(QString &filePath, ReverseGeoCoder *coder);
+    ImageProcessorRunnable(QString &filePath, Types::MimeType type, ReverseGeoCoder *coder);
     void run() override;
 
 signals:
@@ -26,6 +28,7 @@ signals:
 
 private:
     QString m_path;
+    Types::MimeType m_type;
     ReverseGeoCoder *m_geoCoder;
 };
 }

@@ -1,5 +1,6 @@
 /*
  * SPDX-FileCopyrightText: (C) 2015 Vishesh Handa <vhanda@kde.org>
+ * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
@@ -21,7 +22,7 @@ private slots:
     void testSimple();
 };
 
-using namespace Koko;
+using namespace JingGallery;
 
 void ReverseGeoCoderTest::testSimple()
 {

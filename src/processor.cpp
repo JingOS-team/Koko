@@ -1,19 +1,20 @@
 /*
  * SPDX-FileCopyrightText: (C) 2014  Vishesh Handa <me@vhanda.in>
+ * SPDX-FileCopyrightText: (C) 2021  Wang Rui <wangrui@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "processor.h"
 #include "imageprocessorrunnable.h"
-#include "imagestorage.h"
+#include "mediastorage.h"
 
 #include <QDebug>
 #include <QEventLoop>
 #include <QFileInfo>
 #include <QThreadPool>
 
-using namespace Koko;
+using namespace JingGallery;
 
 Processor::Processor(QObject *parent)
     : QObject(parent)
@@ -22,7 +23,7 @@ Processor::Processor(QObject *parent)
     , m_initialScanDone(false)
 {
     connect(&m_commitTimer, &CommitTimer::timeout, [&]() {
-        ImageStorage::instance()->commit();
+        MediaStorage::instance()->commit();
         if (m_files.isEmpty()) {
             m_geoCoder.deinit();
             if (m_numFiles && m_initialScanDone)
@@ -37,9 +38,9 @@ Processor::~Processor()
 {
 }
 
-void Processor::addFile(const QString &filePath)
+void Processor::addFile(const QString &filePath, Types::MimeType type)
 {
-    m_files << filePath;
+    m_files << qMakePair(type, filePath);
     m_numFiles++;
 
     QTimer::singleShot(0, this, SLOT(process()));
@@ -48,7 +49,7 @@ void Processor::addFile(const QString &filePath)
 
 void Processor::removeFile(const QString &filePath)
 {
-    ImageStorage::instance()->removeImage(filePath);
+    MediaStorage::instance()->removeMedia(filePath);
     m_numFiles--;
 
     emit numFilesChanged();
@@ -76,11 +77,12 @@ void Processor::process()
     if (m_files.isEmpty()) {
         return;
     }
-
     m_processing = true;
-    QString path = m_files.takeLast();
+    QPair<Types::MimeType, QString> pair = m_files.takeLast();
+    Types::MimeType type = pair.first;
+    QString path = pair.second;
 
-    ImageProcessorRunnable *runnable = new ImageProcessorRunnable(path, &m_geoCoder);
+    ImageProcessorRunnable *runnable = new ImageProcessorRunnable(path, type,&m_geoCoder);
     connect(runnable, SIGNAL(finished()), this, SLOT(slotFinished()));
 
     QThreadPool::globalInstance()->start(runnable);
@@ -90,7 +92,6 @@ void Processor::slotFinished()
 {
     m_processing = false;
     QTimer::singleShot(0, this, SLOT(process()));
-
     emit initialProgressChanged();
     m_commitTimer.start();
 }

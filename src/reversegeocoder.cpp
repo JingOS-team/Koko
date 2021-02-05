@@ -1,18 +1,17 @@
 /*
  * SPDX-FileCopyrightText: (C) 2015 Vishesh Handa <me@vhanda.in>
+ *                             2021 Wang Rui <wangrui@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "reversegeocoder.h"
-
 #include <QFile>
 #include <QStandardPaths>
 #include <QTextStream>
-
 #include <QDebug>
 
-using namespace Koko;
+using namespace JingGallery;
 
 ReverseGeoCoder::ReverseGeoCoder()
     : m_tree(0)
@@ -27,24 +26,17 @@ ReverseGeoCoder::~ReverseGeoCoder()
 void ReverseGeoCoder::init()
 {
     m_tree = kd_create(2);
-
     QString citiesPath = QStandardPaths::locate(QStandardPaths::DataLocation, "cities1000.txt");
     Q_ASSERT(!citiesPath.isEmpty());
-
     QFile file(citiesPath);
     if (!file.open(QIODevice::ReadOnly)) {
         Q_ASSERT_X(0, "", "Failed to open cities1000.txt file");
     }
     QTextStream fstream(&file);
-
     while (!fstream.atEnd()) {
         QString str = fstream.readLine();
         str.remove('\r');
-
         QStringList list = str.split('\t');
-
-        // int geoId = list[0].toInt();
-        // QString name = list[1];
         double lat = list[4].toDouble();
         double lon = list[5].toDouble();
         QString countryCode = list[8];
@@ -52,12 +44,9 @@ void ReverseGeoCoder::init()
         QString admin2Code = list[11];
 
         QVariantMap *map = new QVariantMap();
-        // map->insert("geoId", geoId);
-        // map->insert("name", name);
         map->insert("countryCode", countryCode);
         map->insert("admin1Code", admin1Code);
         map->insert("admin2Code", admin2Code);
-
         kd_insert3(m_tree, lat, lon, 0.0, static_cast<void *>(map));
     }
 

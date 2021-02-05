@@ -1,6 +1,7 @@
 /*
  * SPDX-FileCopyrightText: (C) 2014 Vishesh Handa <vhanda@kde.org>
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
+ * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
@@ -22,13 +23,17 @@
 #include <QCommandLineOption>
 #include <QCommandLineParser>
 #include <QQuickView>
+#include <QQuickStyle>
 
 #include <iostream>
 
 #include "filesystemtracker.h"
-#include "imagestorage.h"
-#include "kokoconfig.h"
+#include "mediastorage.h"
+#include "jinggalleryconfig.h"
 #include "processor.h"
+#include "resizehandle.h"
+#include "resizerectangle.h"
+#include "listimageprovider.h"
 
 #ifdef Q_OS_ANDROID
 #include <QtAndroid>
@@ -36,42 +41,42 @@
 
 int main(int argc, char **argv)
 {
-    KLocalizedString::setApplicationDomain("koko");
 
-    KAboutData aboutData(QStringLiteral("koko"),
-                         xi18nc("@title", "<application>Koko</application>"),
-                         QStringLiteral("0.1-dev"),
-                         xi18nc("@title", "Koko is an image viewer for your image collection."),
+    KLocalizedString::setApplicationDomain("Photos");
+    KAboutData aboutData(QStringLiteral("Photos"),
+                         xi18nc("@title", "<application>Photos</application>"),
+                         QStringLiteral("0.2-dev"),
+                         xi18nc("@title", "Photos is an image viewer for your image collection."),
                          KAboutLicense::LGPL,
                          xi18nc("@info:credit", "(c) 2013-2020 KDE Contributors"));
 
     aboutData.setOrganizationDomain(QByteArray("kde.org"));
-    aboutData.setProductName(QByteArray("koko"));
+    aboutData.setProductName(QByteArray("Photos"));
 
     aboutData.addAuthor(xi18nc("@info:credit", "Vishesh Handa"),
-            xi18nc("@info:credit","Developer"),
-            "vhanda@kde.org");
+                        xi18nc("@info:credit","Developer"),
+                        "vhanda@kde.org");
 
     aboutData.addAuthor(xi18nc("@info:credit", "Atul Sharma"),
-            xi18nc("@info:credit", "Developer"),
-            "atulsharma406@gmail.com");
+                        xi18nc("@info:credit", "Developer"),
+                        "atulsharma406@gmail.com");
 
     aboutData.addAuthor(xi18nc("@info:credit", "Marco Martin"),
-            xi18nc("@info:credit", "Developer"),
-            "mart@kde.org");
+                        xi18nc("@info:credit", "Developer"),
+                        "mart@kde.org");
 
     aboutData.addAuthor(xi18nc("@info:credit", "Nicolas Fella"),
-            xi18nc("@info:credit", "Developer"),
-            "nicolas.fella@gmx.de");
+                        xi18nc("@info:credit", "Developer"),
+                        "nicolas.fella@gmx.de");
 
     aboutData.addAuthor(xi18nc("@info:credit", "Carl Schwan"),
-            xi18nc("@info:credit", "Developer"),
-            "carl@carlschwan.eu");
+                        xi18nc("@info:credit", "Developer"),
+                        "carl@carlschwan.eu");
 
     KAboutData::setApplicationData(aboutData);
 
     QApplication app(argc, argv);
-    app.setApplicationDisplayName("Koko");
+    app.setApplicationDisplayName("Photos");
     app.setOrganizationDomain("kde.org");
 
     QCommandLineParser parser;
@@ -88,49 +93,69 @@ int main(int argc, char **argv)
     QApplication::setApplicationDisplayName(aboutData.displayName());
     QApplication::setOrganizationDomain(aboutData.organizationDomain());
     QApplication::setApplicationVersion(aboutData.version());
-    QApplication::setWindowIcon(QIcon::fromTheme(QStringLiteral("koko")));
+    QApplication::setWindowIcon(QIcon::fromTheme(QStringLiteral("jinggallery")));
+
+    QString checkPaths;
+    QString CommandLinePath;
+
 
     if (parser.positionalArguments().size() > 1) {
         parser.showHelp(1);
+    } else if (parser.positionalArguments().size() == 1) {
+        QString pa = parser.positionalArguments().first();
+        QUrl comlinePath = QUrl::fromUserInput(pa,QDir::currentPath(),QUrl::AssumeLocalFile);
+
+        QFileInfo comLineFile(comlinePath.path());
+        checkPaths = comLineFile.path();
+        MediaStorage::DATA_TABLE_NAME = "commandline_files";
+        CommandLinePath = comlinePath.path();
+    } else {
+        MediaStorage::DATA_TABLE_NAME = "files";
+        QStringList locations = QStandardPaths::standardLocations(QStandardPaths::PicturesLocation);
+        Q_ASSERT(locations.size() >= 1);
+        checkPaths = locations.first();
     }
 
     if (parser.isSet("reset")) {
-        ImageStorage::reset();
+        MediaStorage::reset();
     }
 
     QThread trackerThread;
-
-    QStringList locations = QStandardPaths::standardLocations(QStandardPaths::PicturesLocation);
-    Q_ASSERT(locations.size() >= 1);
-    qDebug() << locations;
-
 #ifdef Q_OS_ANDROID
     QtAndroid::requestPermissionsSync({"android.permission.WRITE_EXTERNAL_STORAGE"});
 #endif
 
+    qRegisterMetaType<Types::MimeType>("Types::MimeType");
     FileSystemTracker tracker;
-    tracker.setFolder(locations.first());
+    tracker.setFolder(checkPaths);
     tracker.moveToThread(&trackerThread);
 
-    Koko::Processor processor;
-    QObject::connect(&tracker, &FileSystemTracker::imageAdded, &processor, &Koko::Processor::addFile);
-    QObject::connect(&tracker, &FileSystemTracker::imageRemoved, &processor, &Koko::Processor::removeFile);
-    QObject::connect(&tracker, &FileSystemTracker::initialScanComplete, &processor, &Koko::Processor::initialScanCompleted);
+    JingGallery::Processor processor;
+    QObject::connect(&tracker, &FileSystemTracker::mediaAdded, &processor, &JingGallery::Processor::addFile);
+    QObject::connect(&tracker, &FileSystemTracker::mediaRemoved, &processor, &JingGallery::Processor::removeFile);
+    QObject::connect(&tracker, &FileSystemTracker::initialScanComplete, &processor, &JingGallery::Processor::initialScanCompleted);
 
     QObject::connect(&trackerThread, &QThread::started, &tracker, &FileSystemTracker::setupDb);
 
     trackerThread.start();
     tracker.setSubFolder(tracker.folder());
 
-    KokoConfig config;
-    QObject::connect(&config, &KokoConfig::IconSizeChanged, &config, &KokoConfig::save);
+    JingGalleryConfig config;
+    QObject::connect(&config, &JingGalleryConfig::IconSizeChanged, &config, &JingGalleryConfig::save);
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextObject(new KLocalizedContext(&engine));
 
-    engine.rootContext()->setContextProperty("kokoProcessor", &processor);
-    engine.rootContext()->setContextProperty("kokoConfig", &config);
-    engine.rootContext()->setContextProperty(QStringLiteral("kokoAboutData"), QVariant::fromValue(aboutData));
+    engine.rootContext()->setContextProperty("jingGalleryProcessor", &processor);
+    engine.rootContext()->setContextProperty("jingGalleryConfig", &config);
+    engine.rootContext()->setContextProperty(QStringLiteral("jinggalleryAboutData"), QVariant::fromValue(aboutData));
+
+    engine.rootContext()->setContextProperty("CommandLineInto", CommandLinePath);
+    qmlRegisterType<ResizeHandle>("org.kde.jinggallery.private", 1, 0, "ResizeHandle");
+    qmlRegisterType<ResizeRectangle>("org.kde.jinggallery.private", 1, 0, "ResizeRectangle");
+
+    ListImageProvider *lp = new ListImageProvider(QQmlImageProviderBase::Pixmap);
+    engine.addImageProvider(QLatin1String("imageProvider"), lp);
 
     QString path;
     // we want different main files on desktop or mobile

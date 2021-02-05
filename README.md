@@ -1,12 +1,22 @@
-# Koko
+# Jing-Photos <img src="logo.png" width="40"/>
+# Origin from Koko
 
-Koko is an image viewer designed for desktop and touch devices.
+Jing-Photos is based on Koko [github](https://invent.kde.org/graphics/koko/) , a beautifully designed photos that conforms to the JingOS style and has a compatible `pad / desktop` experience.
 
 ## Contributing
 
-Contributions are welcome. We use https://invent.kde.org/graphics/koko/.
+Koko Project https://invent.kde.org/graphics/koko/.
 
 The [KDE Community Code of Conduct](https://kde.org/code-of-conduct) is applied.
+
+## Features
+
+* Brand new UI & UE with JingOS-style , based on JingUI Framework
+* Run on JingOS platform
+* Support keyboard & touchpad & mouse & screen touch 
+* Support image rotation, clipping and deletion
+* Pictures and videos are arranged in positive time order
+* The database caches pictures and video information
 
 ## License
 
@@ -16,7 +26,7 @@ LicenseRef-KDE-Accepted-LGPL. More information can be found in the
 
 ## Packaging
 
-To build Koko, it is required to have a few files packaged with the
+To build Jing-Photos, it is required to have a few files packaged with the
 application. These files are licensed under the CC-BY-SA-4.0.
 
 * http://download.geonames.org/export/dump/cities1000.zip
@@ -25,3 +35,25 @@ application. These files are licensed under the CC-BY-SA-4.0.
 
 These files need to be copied to the `src` directory. CMake will
 take care of the rest.
+
+## Links
+
+- Home: [www.jingos.com](http://www.jingos.com/)
+- Project page: github.com/jingOS-team/jing-photo
+- File issues: github.com/jingOS-team/jing-photo/issues
+- Development channel: [www.jingos.com](http://www.jingos.com/)
+
+## Installing
+
+```
+mkdir build
+cd build
+cmake ..
+make
+sudo make install
+```
+
+
+
+
+
