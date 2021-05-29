@@ -164,6 +164,9 @@ void FileSystemTracker::removeFile(const QString &filePath)
 
     if (filePath.startsWith("file://"))
         realPath = filePath.mid(7);
+    if (!realPath.startsWith(m_folder)) {
+        return;
+    }
 
     emit mediaRemoved(realPath);
 
@@ -184,6 +187,9 @@ void FileSystemTracker::slotNewFiles(const QStringList &files)
 
     QMimeDatabase db;
     for (const QString &file : files) {
+        if (!file.startsWith(m_folder)) {
+            continue;
+        }
         QMimeType mimetype = db.mimeTypeForFile(file);
         if (mimetype.name().startsWith("image/")) {
             slotMediaResult(file, Types::MimeType::Image);

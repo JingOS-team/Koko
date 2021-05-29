@@ -15,14 +15,15 @@ import "common.js" as CSJ
 Rectangle {
     id: albumDelegate
 
-    property alias containsMouse: albumThumbnailMouseArea.containsMouse
+    property alias containsMouse: selectionHighlight.itemContainsMouse
     property QtObject modelData
     property string mimeType: modelData.mimeType
+    property bool isVideoType: modelData.mediaType === 1
     property int duration: modelData.duration
     property bool itemHoverd
+    property alias isMenuOpen : selectionHighlight.isShow
     property int count
-    property int checkboxHeight: root.height * (CSJ.Left_View_Cancel_Height / CSJ.ScreenHeight)
-
+    property int checkboxHeight: 22 
     signal clicked(var mouse)
     signal rightClicked(var mouse)
     signal pressAndHold(var mouse)
@@ -43,12 +44,12 @@ Rectangle {
         property string imageSource: modelData.thumbnailPixmap
 
         anchors.centerIn: albumDelegate
-        width: parent.width - 15
-        height: parent.height - 15
+        width: parent.width - (8 * appScaleSize)
+        height: parent.height - (8 * appScaleSize)
         smooth: true
         asynchronous: true
         sourceSize: Qt.size(width, height)
-        source: (mimeType.search("video") === 0
+        source: (isVideoType
                  && imageSource == "") ? "qrc:/assets/video_default.png" : imageSource //+"*"+count//"image://imageProvider/"+ modelData.mediaurl //"file:///home/test/Pictures/abhi-bakshi--adV1rnXsWQ-unsplash.jpg"
         fillMode: Image.PreserveAspectCrop
 
@@ -66,33 +67,44 @@ Rectangle {
 
         width: parent.width
         height: parent.height
-        visible: albumDelegate.itemHoverd
-    }
-
-    MouseArea {
-        id: albumThumbnailMouseArea
-
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
-        anchors.fill: parent
-        hoverEnabled: true
-
-        onEntered: {
-            albumDelegate.itemHoverd = true
-        }
-        onExited: {
-            albumDelegate.itemHoverd = false
-        }
-        onPressAndHold: {
-            albumDelegate.pressAndHold(mouse)
-        }
-        onClicked: {
+//        visible: albumDelegate.itemHoverd
+        color: "transparent"
+        onItemClicked: {
             if (mouse.button !== Qt.RightButton && itemCheckBox.visible) {
                 gridView.model.toggleSelected(model.index)
             } else {
                 albumDelegate.clicked(mouse)
             }
         }
+        onItemPressAndHold: {
+            albumDelegate.pressAndHold(mouse)
+        }
     }
+
+//    MouseArea {
+//        id: albumThumbnailMouseArea
+
+//        acceptedButtons: Qt.LeftButton | Qt.RightButton
+//        anchors.fill: parent
+//        hoverEnabled: true
+
+//        onEntered: {
+//            albumDelegate.itemHoverd = true
+//        }
+//        onExited: {
+//            albumDelegate.itemHoverd = false
+//        }
+//        onPressAndHold: {
+//            albumDelegate.pressAndHold(mouse)
+//        }
+//        onClicked: {
+//            if (mouse.button !== Qt.RightButton && itemCheckBox.visible) {
+//                gridView.model.toggleSelected(model.index)
+//            } else {
+//                albumDelegate.clicked(mouse)
+//            }
+//        }
+//    }
 
     Keys.onPressed: {
         switch (event.key) {
@@ -109,11 +121,12 @@ Rectangle {
     ItemCheckBox {
         id: itemCheckBox
 
+        property int rightBottomMargin: 0
         anchors {
             right: parent.right
-            rightMargin: itemCheckBox.width / 2
-            bottom: parent.bottom
-            bottomMargin: itemCheckBox.width / 4
+            rightMargin: 4 * appScaleSize
+            bottom: image.bottom
+            bottomMargin: rightBottomMargin * appScaleSize
         }
         visible: albumTabBar.bulkIsVisible
         radiusCB: width / 5
@@ -121,6 +134,7 @@ Rectangle {
         checked: getSelectMedias()
         isItem: true
         width: checkboxHeight
+        height: width
         csource: checked ? "qrc:/assets/item_check_ok.png" : "qrc:/assets/item_check_default.png"
 
         function getSelectMedias() {
@@ -141,7 +155,7 @@ Rectangle {
         visible: getMimeType() && !itemCheckBox.visible
 
         function getMimeType() {
-            return mimeType.search("video") === 0
+            return isVideoType
         }
 
         Image {
@@ -152,8 +166,9 @@ Rectangle {
                 leftMargin: height / 5
                 verticalCenter: parent.verticalCenter
             }
-            width: parent.width * CSJ.Item_Video_Width / CSJ.Item_Width
+            width: 18 //* appScaleSize//parent.width * CSJ.Item_Video_Width / CSJ.Item_Width
             height: width
+//            sourceSize: Qt.size(36,36)
             source: "qrc:/assets/audio.png"
         }
 
@@ -161,6 +176,7 @@ Rectangle {
             id: timeText
 
             property int min
+            property int hour
 
             anchors {
                 right: parent.right
@@ -168,15 +184,17 @@ Rectangle {
                 verticalCenter: parent.verticalCenter
             }
             text: getDurationTime()
-            font.pointSize: root.defaultFontSize + 2
+            font.pixelSize: root.defaultFontSize - 3
             color: "#FFFFFF"
 
             function getDurationTime() {
                 var seconds = duration % 60
-                min = duration / 60
-                var secondsS = seconds > 10 ? seconds : "0" + seconds
-                var minS = min > 10 ? min : "0" + min
-                return minS + ":" + secondsS
+                min = (duration % 3600) / 60
+                hour = duration / 3600
+                var secondsS = seconds > 9 ? seconds : "0" + seconds
+                var minS = min > 9 ? min : "0" + min
+                var hourS = hour > 9 ? hour : "0" + hour
+                return hour > 0 ? (hourS + ":" + minS + ":" + secondsS) : ( minS + ":" + secondsS)
             }
         }
     }

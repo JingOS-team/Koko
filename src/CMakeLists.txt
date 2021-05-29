@@ -11,7 +11,6 @@ set(LIB_SRCS
 add_library(jinggallerycommon SHARED ${LIB_SRCS})
 target_link_libraries(jinggallerycommon
     Qt5::Core
-    Qt5::Positioning
     Qt5::Sql
     KF5::CoreAddons
     KF5::KIOCore
@@ -60,9 +59,9 @@ target_link_libraries(jinggallery
     Qt5::Quick
     Qt5::Widgets
     Qt5::Qml
-    Qt5::Positioning
     Qt5::DBus
     KF5::ConfigCore
+    KF5::DBusAddons
     KF5::I18n
     KF5::CoreAddons
     KF5::KIOCore
@@ -115,6 +114,7 @@ target_link_libraries (jinggalleryqmlplugin
     KF5::Notifications
     jinggallerycommon
     LibExiv2::LibExiv2
+    KF5::ConfigCore
 )
 
 install (TARGETS jinggalleryqmlplugin DESTINATION ${QML_INSTALL_DIR}/org/kde/jinggallery)

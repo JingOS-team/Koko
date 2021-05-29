@@ -16,6 +16,8 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <QFile>
+#include <KLocalizedString>
+
 #define WEEKDAY_SEC  24 * 3600 * 7
 #define DAY_SEC  24 * 3600
 
@@ -23,9 +25,19 @@ MediaMimeTypeModel::MediaMimeTypeModel(QObject *parent)
     : QAbstractListModel(parent)
     , m_mimetype(Types::MimeType::All)
 {
+    m_localeConfig = KSharedConfig::openConfig(QStringLiteral("kdeglobals"), KConfig::FullConfig);
+    m_localeConfigWatcher = KConfigWatcher::create(m_localeConfig);
+
+    // watch for changes to locale config, to update 12/24 hour time
+    bool dirWatcherConnect = connect(m_localeConfigWatcher.data(), &KConfigWatcher::configChanged,
+    this, [this](const KConfigGroup &group, const QByteArrayList &names) {
+        if (group.name() == "Locale") {
+            slotPopulate();
+        }
+    });
     connect(MediaStorage::instance(), SIGNAL(storageModified()), this, SLOT(slotPopulate()));
     connect(this, &QAbstractItemModel::rowsInserted, this, &MediaMimeTypeModel::countChanged);
-    connect(this, &QAbstractItemModel::rowsRemoved, this, &MediaMimeTypeModel::countChanged);
+    connect(this, &QAbstractItemModel::rowsRemoved, this, &MediaMimeTypeModel::onRemoveData);
     connect(this, &QAbstractItemModel::modelReset, this, &MediaMimeTypeModel::countChanged);
 }
 
@@ -68,14 +80,29 @@ void MediaMimeTypeModel::deleteItemByIndex(int index)
     emit countChanged();
 }
 
+bool MediaMimeTypeModel::is24HourFormat() const
+{
+    KSharedConfig::Ptr  m_localeConfig = KSharedConfig::openConfig(QStringLiteral("kdeglobals"), KConfig::SimpleConfig);
+    KConfigGroup  m_localeSettings = KConfigGroup(m_localeConfig, "Locale");
+
+    QString m_currentLocalTime  =  m_localeSettings.readEntry("TimeFormat", QStringLiteral(FORMAT24H));
+    return (m_currentLocalTime == FORMAT24H) ;
+}
+
 void MediaMimeTypeModel::slotPopulate()
 {
     if (!isDeleteOne) {
         beginResetModel();
         m_medias = MediaStorage::instance()->mediasForMimeType(m_mimetype);
         endResetModel();
+        m_loadStatus = 1;
+        emit loadStatusChanged();
     }
     isDeleteOne = false;
+}
+
+void MediaMimeTypeModel::onRemoveData(const QModelIndex &parent, int first, int last)
+{
 }
 
 QHash<int, QByteArray> MediaMimeTypeModel::roleNames() const
@@ -89,6 +116,7 @@ QHash<int, QByteArray> MediaMimeTypeModel::roleNames() const
     hash.insert(Roles::MimeTypeRole, "mimeType");
     hash.insert(Roles::DateTimeRole, "imageTime");
     hash.insert(Roles::PreviewUrlRole, "previewurl");
+    hash.insert(Roles::MediaTypeRole, "mediaType");
     return hash;
 }
 
@@ -132,26 +160,27 @@ QVariant MediaMimeTypeModel::data(const QModelIndex &index, int role) const
         QDateTime currentDate =  QDateTime::currentDateTime();
         QDateTime qdate = m_medias.at(indexValue).dateTime;
         int dayoffset = qdate.daysTo(currentDate);
+        bool getLocalTimeIs24 = is24HourFormat();
+        QString currentDayString = getLocalTimeIs24 ? "hh:mm" : (QLatin1String("hh:mm") + " AP");
 
         if (dayoffset <= 7) {
             if (dayoffset < 1) {
-                dateString = qdate.toString("hh:mm AP");
+                dateString = qdate.toString(currentDayString);
             } else if (dayoffset == 1) {
-                dateString = "yestday "+ qdate.toString("hh:mm AP");
+                dateString = i18n("yestday ")+ qdate.toString(currentDayString);
             } else {
                 //qdate.date().dayOfWeek() +
-                dateString =  qdate.toString("dddd hh:mm AP");
+                dateString =  qdate.toString("dddd " + currentDayString);
             }
         } else {
             int currentYear = currentDate.date().year();
             int dataYear = qdate.date().year();
             if (currentYear == dataYear) {
-                dateString = qdate.toString("MM-dd hh:mm AP");
+                dateString = qdate.toString("MM-dd " + currentDayString);
             } else {
-                dateString = qdate.toString("yyyy-MM-dd hh:mm AP");
+                dateString = qdate.toString("yyyy-MM-dd " + currentDayString);
 
             }
-
         }
         return dateString;
     }
@@ -164,6 +193,9 @@ QVariant MediaMimeTypeModel::data(const QModelIndex &index, int role) const
         QMimeDatabase db;
         QMimeType type = db.mimeTypeForFile(m_medias.at(indexValue).path);
         return type.name();
+    }
+    case Roles::MediaTypeRole: {
+        return m_medias.at(indexValue).mimeType;
     }
     }
 
@@ -179,13 +211,14 @@ int MediaMimeTypeModel::rowCount(const QModelIndex &parent) const
     return m_medias.size();
 }
 
-bool MediaMimeTypeModel::removeRows(int row, int count, const QModelIndex &parent)
+bool MediaMimeTypeModel::dataRemoveRows(int row, int count, int dIndex, const QModelIndex &parent)
 {
+    beginRemoveRows({},dIndex,dIndex);
     for (int i = row; i < count+row; i++)
     {
-        if (i > 0 && i < m_medias.size())
-            deleteItemByIndex(i);
+        deleteItemByIndex(i);
     }
+    endRemoveRows();
     return true;
 }
 

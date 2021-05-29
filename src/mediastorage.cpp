@@ -21,8 +21,6 @@
 
 #include <QDataStream>
 #include <QDebug>
-#include <QGeoAddress>
-#include <QGeoCoordinate>
 #include <QProcess>
 #include <QDir>
 #include <QStandardPaths>
@@ -111,7 +109,6 @@ MediaStorage *MediaStorage::instance()
 void MediaStorage::addMedia(const MediaInfo &ii)
 {
     QMutexLocker lock(&m_mutex);
-    QGeoAddress addr = ii.location.address();
     QSqlQuery query;
     query.prepare("INSERT INTO "+DATA_TABLE_NAME+"(url, type, duration, dateTime) VALUES(?, ?, ?, ?)");
     query.addBindValue(ii.path);

@@ -9,7 +9,6 @@
 #define IMAGELOCATIONMODEL_H
 
 #include <QAbstractListModel>
-#include <QGeoLocation>
 #include <QStringList>
 
 #include "types.h"

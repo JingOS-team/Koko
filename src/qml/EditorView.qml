@@ -30,10 +30,11 @@ import QtQuick.Dialogs 1.0
 Item {
     id: rootEditorView
 
-    property string mimeType
+    property var mediaType
     property int duration
     property string imageTime
-    property bool isVideo: mimeType.search("video") === 0
+    //mimeType.search("video") === 0
+    property bool isVideo: mediaType === 1
     property bool resizing: false
     property var index
     property int mIndex
@@ -42,10 +43,9 @@ Item {
     property string thumbnailPixmapPath
     property string mediaUrl
     property bool isViewClicked: false
-    property int cropImageHeight: cropView.height * CSJ.Item_Crop_Heigh / CSJ.Item_Crop_View_Heigh
-    property int cropImageWidth: cropView.width * 4 / 5
     property int rotateCount
     property bool plStatus: previewLoader.status === Loader.Ready
+    property bool isGif
 
     signal itemClicked
     signal deleteItemClicked
@@ -105,37 +105,67 @@ Item {
         source: thumbnailPixmapPath
         visible: isFirstOpenPage
         fillMode: Image.PreserveAspectFit
+        autoTransform: true
     }
 
-    Image {
-        id: thumbImage
+//    Image {
+//        id: thumbImage
 
-        width: rootEditorView.width
-        height: rootEditorView.height
-        source: imagePath
-        asynchronous: true
-        visible: !previewLoader.active || previewLoader.status != Loader.Ready
-        fillMode: Image.PreserveAspectFit
+//        width: rootEditorView.width
+//        height: rootEditorView.height
+//        source: imagePath
+//        asynchronous: true
+//        visible: !previewLoader.active || previewLoader.status != Loader.Ready
+//        fillMode: Image.PreserveAspectFit
+//        autoTransform: true
 
-        onStatusChanged: {
-            if (thumbImage.status == Image.Ready
-                    && listView.currentIndex == mIndex) {
-                isFirstOpenPage = false
-            }
-        }
+//        onStatusChanged: {
+//            if (thumbImage.status == Image.Ready
+//                    && listView.currentIndex == mIndex) {
+//                isFirstOpenPage = false
+//            }
+//        }
 
-        MouseArea {
-            anchors.fill: parent
-            onClicked: {
-                itemClicked()
+//        MouseArea {
+//            anchors.fill: parent
+//            onClicked: {
+//                itemClicked()
+//            }
+//        }
+//    }
+
+    Component{
+        id:moveComponent
+        Item {
+            id: moveContent
+
+            width: rootEditorView.width
+            height: rootEditorView.height
+
+            PhotoImagePreview{
+                id: thumbImage
+                source: imagePath
+                width: moveContent.width
+                height: moveContent.height
+                animated: model.mimeType === "image/gif"
+//                visible: !previewLoader.active || previewLoader.status != Loader.Ready
+                onImageClicked: {
+                    itemClicked()
+                }
             }
         }
     }
 
     Loader {
+        id: moveLoader
+        sourceComponent: moveComponent
+        active: true//!previewLoader.active || previewLoader.status != Loader.Ready
+    }
+
+    Loader {
         id: previewLoader
         sourceComponent: previewComponent
-        active: listView.currentIndex === mIndex && !listView.interactive
+        active: false//listView.currentIndex === mIndex && !listView.interactive && model.mimeType !== "image/gif"
     }
 
     Koko.ImageDocument {
@@ -381,7 +411,7 @@ Item {
                 id: videoPic
 
                 anchors.centerIn: parent
-                width: parent.height * 447 / 1200
+                width: 120
                 height: width
                 source: "qrc:/assets/edit_audio.png"
                 visible: isVideo

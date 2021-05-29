@@ -6,7 +6,7 @@
 
 import QtQuick 2.15
 import QtQuick.Controls 2.15
-import org.kde.kirigami 2.12 as Kirigami
+import org.kde.kirigami 2.15 as Kirigami
 import org.kde.kquickcontrolsaddons 2.0 as KQA
 import org.kde.jinggallery 0.2 as Koko
 
@@ -33,23 +33,23 @@ Rectangle {
         }
         spacing:height * 0.2
 
-        RoundButton {
-            id: idDelect
+        // RoundButton {
+        //     id: idDelect
 
-            anchors.verticalCenter: parent.verticalCenter
-            width: parent.width
-            height: parent.height * 0.9
-            radius: height / 2
-            text: i18n("Del")
-            enabled: model.hasSelectedImages
+        //     anchors.verticalCenter: parent.verticalCenter
+        //     width: parent.width
+        //     height: parent.height * 0.9
+        //     radius: height / 2
+        //     text: i18n("Del")
+        //     enabled: model.hasSelectedImages
             
-            onClicked: {
-                model.deleteSelection()
-                page.state = "browsing"
-            }
-            background: Rectangle {
-                radius: parent.radius
-            }
-        }
+        //     onClicked: {
+        //         model.deleteSelection()
+        //         page.state = "browsing"
+        //     }
+        //     background: Rectangle {
+        //         radius: parent.radius
+        //     }
+        // }
     }
 }

@@ -30,6 +30,7 @@
 #include <QThread>
 #include "imagesavethread.h"
 #include <QThreadPool>
+#include <QImageReader>
 
 ImageDocument::ImageDocument()
 {
@@ -38,7 +39,9 @@ ImageDocument::ImageDocument()
         Q_EMIT resetHandle();
         /** Since the url passed by the model in the ImageViewer.qml contains 'file://' prefix */
         const QString location = QUrl(url).path();
-        m_undoImages.append(QImage(location));
+        QImageReader imageRead(location);
+        imageRead.setAutoTransform(true);
+        m_undoImages.append(imageRead.read());
         m_edited = false;
         Q_EMIT editedChanged();
         Q_EMIT visualImageChanged();

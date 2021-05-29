@@ -22,8 +22,6 @@
 
 #include <QDataStream>
 #include <QDateTime>
-#include <QGeoAddress>
-#include <QGeoLocation>
 #include <QObject>
 
 #include <QMutex>
@@ -34,7 +32,6 @@
 
 struct ImageInfo {
     QString path;
-    QGeoLocation location;
     QDateTime dateTime;
 };
 

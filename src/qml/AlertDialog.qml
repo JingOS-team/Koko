@@ -13,10 +13,10 @@ import "common.js" as CSJ
 Kirigami.JDialog{
     id:dialog
 
-    property var titleContent : "Delete"
-    property var msgContent : "Are you sure you want to delete this photo?"
-    property var rightButtonContent : "Delete"
-    property var leftButtonContent : "Cancel"
+    property var titleContent : i18n("Delete")
+    property var msgContent : i18n("Are you sure you want to delete this photo?")
+    property var rightButtonContent : i18n("Delete")
+    property var leftButtonContent : i18n("Cancel")
 
     signal dialogRightClicked
     signal dialogLeftClicked

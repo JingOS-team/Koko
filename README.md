@@ -1,7 +1,7 @@
 # Jing-Photos <img src="logo.png" width="40"/>
 # Origin from Koko
 
-Jing-Photos is based on Koko [github](https://invent.kde.org/graphics/koko/) , a beautifully designed photos that conforms to the JingOS style and has a compatible `pad / desktop` experience.
+Jing-Photos is based on Koko [github](https://github.com/JingOS-team/jing-photos/blob/master/TODO) , a beautifully designed photos that conforms to the JingOS style and has a compatible `pad / desktop` experience.
 
 ## Contributing
 

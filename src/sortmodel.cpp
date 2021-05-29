@@ -21,6 +21,7 @@
 #include <QDBusConnection>
 #include <QDBusReply>
 #include <QDBusInterface>
+#include <QDateTime>
 
 #define SERVICE_NAME            "org.kde.haruna.qtdbus.playvideo"
 
@@ -159,11 +160,10 @@ QVariant SortModel::data(const QModelIndex &index, int role) const
 void SortModel::deleteItemByModeIndex(int indexValue)
 {
     int si = sourceIndex(indexValue);
-    int pi = proxyIndex(indexValue);
-    QModelIndex index = QSortFilterProxyModel::index(indexValue, 0);
-    beginRemoveRows({},indexValue,indexValue);
-    sourceModel()->removeRows(indexValue,1, {});
-    endRemoveRows();
+//    beginRemoveRows({},indexValue,indexValue);
+//    sourceModel()->removeRows(indexValue,1, {});
+    qobject_cast<MediaMimeTypeModel*>(sourceModel())->dataRemoveRows(indexValue,1,si, {});
+//    endRemoveRows();
 }
 
 void SortModel::deleteFileByModeIndex(QString path)
@@ -290,29 +290,45 @@ void SortModel::clearSelections()
 
 void SortModel::selectAll()
 {
-    QModelIndexList indexList;
-    for (int row = 0; row < rowCount(); row++) {
-        indexList.append(index(row, 0, QModelIndex()));
-    }
+    qint64 startTime = QDateTime::currentMSecsSinceEpoch();
 
     if (m_selectionModel->hasSelection()) {
         m_selectionModel->clear();
     }
 
-    foreach (QModelIndex index, indexList) {
-        if (Types::Media == data(index, Roles::ItemTypeRole))
-            m_selectionModel->select(index, QItemSelectionModel::Select);
-        QString mimeType = data(index,Roles::MimeTypeRole).toString();
+//    if(m_selections.count() > 0){
+//        m_selections.clear();
+//    }
+    QModelIndex topLeft;
+    QModelIndex bottomRight;
+
+    topLeft = index(0, 0, QModelIndex());
+    bottomRight = index(rowCount() - 1, 0, QModelIndex());
+    QItemSelection cselection(topLeft, bottomRight);
+
+//    m_selections.select(index(0, 0, QModelIndex()), index(rowCount() - 1, 0, QModelIndex()));
+    m_selectionModel->select(cselection, QItemSelectionModel::Select);
+
+    emit dataChanged(index(0, 0, QModelIndex()), index(rowCount() - 1, 0, QModelIndex()));
+    emit selectedMediasChanged();
+
+    for (int row = 0; row < rowCount(); row++) {
+        QString mimeType = data(index(row, 0, QModelIndex()),Roles::MimeTypeRole).toString();
         if (mimeType.startsWith("image")) {
             m_photoSelectCount++;
             setPhotoSelectCount(m_photoSelectCount);
+            if (m_videoSelectCount > 1) {
+                break;
+            }
         } else if (mimeType.startsWith("video")) {
             m_videoSelectCount++;
             setVideoSelectCount(m_videoSelectCount);
+            if (m_photoSelectCount > 1) {
+                break;
+            }
         }
     }
-    emit dataChanged(index(0, 0, QModelIndex()), index(rowCount() - 1, 0, QModelIndex()));
-    emit selectedMediasChanged();
+    qint64 fte = QDateTime::currentMSecsSinceEpoch();
 }
 
 void SortModel::deleteSelection()
@@ -324,9 +340,16 @@ void SortModel::deleteSelection()
         filesToDelete << url ;
     }
 
-    auto trashJob = KIO::trash(filesToDelete);
+    auto trashJob = KIO::trash(filesToDelete, KIO::HideProgressInfo);
     trashJob->exec();
     clearSelections();
+}
+
+int SortModel::updateSelectCount()
+{
+    int count = m_selectionModel->selectedIndexes().size();
+    setCheckSelectCount(count);
+    return count;
 }
 
 void SortModel::onSelctMediasChange()

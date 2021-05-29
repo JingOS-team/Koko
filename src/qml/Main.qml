@@ -15,10 +15,13 @@ import "common.js" as CSJ
 Kirigami.ApplicationWindow {
     id: root
 
-    property int defaultFontSize : theme.defaultFont.pointSize
+    property int defaultFontSize : 14//theme.defaultFont.pointSize
     property bool isVideo
     property bool isPhoto
     property bool isAll
+    property string currentTabBarTitle
+    property var appScaleSize: width / 888
+    property var heightScaleSize: height / 648
 
     signal thumbnailChanged(var path)
     signal deleteItemData();
@@ -27,14 +30,25 @@ Kirigami.ApplicationWindow {
     width: root.screen.width
     height: root.screen.height
     pageStack.globalToolBar.style: Kirigami.ApplicationHeaderStyle.None
+    color: "#E8EFFF"
+
+    Component.onCompleted:{
+    }
 
     pageStack.initialPage: AlbumView {
         id: albumView
+        anchors{
+            top: parent.top
+//            topMargin: 20
+        }
+        width:root.width
+        height:root.height
         model: mediasModel
+        color: "transparent"
     }
 
     onDeleteItemData: {
-        switch(albumTabBar.selectedItem) {
+        switch(albumView.barSelectName) {
             case CSJ.TopBarItemAllContent:
                 isVideo = true;
                 isPhoto = true;
@@ -67,43 +81,12 @@ Kirigami.ApplicationWindow {
         page.forceActiveFocus();
     }
 
-    Rectangle{
-        id:gradRect
 
-        anchors.top: parent.top
-        width: parent.width
-        height: parent.height/10
-        visible: albumTabBar.visible
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: "#DBFFFFFF"; }
-            GradientStop { position: 1.0; color: "#00FFFFFF"; }
-        }
-    }
-
-    AlbumTabBar {
-        id: albumTabBar
-
-        anchors{
-            top: parent.top
-            topMargin: height/4
-        }
-        visible: albumView.isCurrentPage
-        selectedItem: i18n(CSJ.TopBarItemAllContent)
-
-        Component.onCompleted:{
-            model.append({
-                             title:i18n(CSJ.TopBarItemAllContent)
-                         });
-            model.append({
-                             title:i18n(CSJ.TopBarItemPhotoContent)
-                         });
-            model.append({
-                             title:i18n(CSJ.TopBarItemVideoContent)
-                         });
-        }
-    }
     
     onFilterBy: {
+        if(value !== currentTabBarTitle){
+            albumView.grideHide()
+        }
         switch(value) {
             case CSJ.TopBarItemPhotoContent: {
                 if (isPhoto) {
@@ -138,6 +121,10 @@ Kirigami.ApplicationWindow {
                 break;
             }
         }
+        if(value !== currentTabBarTitle){
+            albumView.grideShow()
+        }
+        currentTabBarTitle = value
     }
 
     Koko.MediaMimeTypeModel {
