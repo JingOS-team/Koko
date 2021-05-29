@@ -21,7 +21,9 @@ Rectangle {
     property string saveName: "qrc:/assets/edit_savetofile.png"
     property string magicName: "qrc:/assets/magic.png"
     property string deleteName: "qrc:/assets/delete.png"
-
+    property int titleTopMargin : 30
+    property bool isGifImage: false
+    property int allBottomMargin: (height - 18 - 22)/2 * appScaleSize
     signal backClicked
     signal cropCLicked
     signal rotateClicked
@@ -30,7 +32,7 @@ Rectangle {
     signal saveToFileClicked
 
     width: parent.width
-    height: parent.height * 3 / 40
+    height: 60 * appScaleSize//parent.height * 3 / 40 + 30
     color: "transparent"
 
     ShaderEffectSource {
@@ -84,12 +86,18 @@ Rectangle {
     Rectangle {
         id: imageTitleLeft
         anchors.left: parent.left
-        height: parent.height
+        anchors{
+            bottom: parent.bottom
+            bottomMargin: allBottomMargin
+        }
+        height: parent.height - titleTopMargin
         width: parent.width / 3
         color: "transparent"
 
         MouseArea {
-            anchors.fill: parent
+            anchors.centerIn: back
+            width: back.width + 30
+            height: back.height + 30
 
             onClicked: {
                 backClicked()
@@ -102,10 +110,9 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             anchors {
                 left: parent.left
-                leftMargin: 20
-                rightMargin: 16
+                leftMargin: 8 * appScaleSize
             }
-            width: parent.height / 2
+            width: 23 * appScaleSize
             height: width
             source: "qrc:/assets/back.png"
 
@@ -123,10 +130,10 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             anchors {
                 left: back.right
-                leftMargin: 16
+                leftMargin: 8 * appScaleSize
             }
             text: qsTr(titleName)
-            font.pointSize: root.defaultFontSize + 6
+            font.pixelSize: root.defaultFontSize + 6
             width: imageTitleLeft.width / 2
             elide: Text.ElideRight
             color: "#000000"
@@ -136,7 +143,12 @@ Rectangle {
         id: imageTitleMiddle
 
         anchors.horizontalCenter: parent.horizontalCenter
-        height: parent.height
+        anchors{
+            bottom: parent.bottom
+            bottomMargin: allBottomMargin
+        }
+
+        height: parent.height - titleTopMargin
         width: parent.width / 3
         color: "transparent"
 
@@ -145,8 +157,8 @@ Rectangle {
 
             anchors.centerIn: parent
             text: qsTr(titleDateTime)
-            font.pointSize: root.defaultFontSize - 3
-            color: "#99000000"
+            font.pixelSize: root.defaultFontSize
+            color: "#993C3C43"
         }
     }
 
@@ -157,10 +169,10 @@ Rectangle {
             name: "qrc:/assets/crop.png"
             flag: 1
         }
-        ListElement {
-            name: "qrc:/assets/edit_savetofile.png"
-            flag: 2
-        }
+//        ListElement {
+//            name: "qrc:/assets/edit_savetofile.png"
+//            flag: 2
+//        }
         ListElement {
             name: "qrc:/assets/magic.png"
             flag: 3
@@ -174,10 +186,10 @@ Rectangle {
     ListModel {
         id: imageVideoModel
 
-        ListElement {
-            name: "qrc:/assets/edit_savetofile.png"
-            flag: 2
-        }
+//        ListElement {
+//            name: "qrc:/assets/edit_savetofile.png"
+//            flag: 2
+//        }
         ListElement {
             name: "qrc:/assets/delete.png"
             flag: 4
@@ -203,8 +215,10 @@ Rectangle {
         anchors {
             right: parent.right
             rightMargin: height / 8
+            bottom: parent.bottom
+            bottomMargin: allBottomMargin
         }
-        height: parent.height
+        height: parent.height - titleTopMargin
         spacing: (height * 3 / 5) / 2
 
         Repeater {
@@ -217,9 +231,9 @@ Rectangle {
                 width: action.width + 30
                 height: parent.height
                 opacity: btnRepeater.count
-                         === 5 ? ((index === 2
-                                   || index === 3) ? 0.5 : 1.0) : (index === 1 ? 0.5 : 1.0)
+                         === 3 ? (((index === 0 || index === 1) && isGifImage) ? 0.5 : 1.0) : (index === 1 ? 0.5 : 1.0)
                 color: "transparent"
+
 
                 JIconButton {
                     id: action
@@ -229,7 +243,7 @@ Rectangle {
                         horizontalCenter: parent.horizontalCenter
                     }
                     width: height
-                    height: 44 + 10
+                    height: 22 + 10
                     source: name
 
                     MouseArea {
@@ -237,6 +251,9 @@ Rectangle {
                         height: parent.height + 30
 
                         onClicked: {
+                            if(actionRect.opacity !== 1.0){
+                                return
+                            }
                             var flag = model.flag
                             switch (flag) {
                             case 0:

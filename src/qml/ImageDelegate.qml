@@ -145,7 +145,6 @@ Flickable {
 
             onStatusChanged: {
                 if (status === Image.Ready && listView.currentIndex === index) {
-                    console.log("status changed")
                     imgColors.update()
                 }
             }

@@ -26,8 +26,8 @@ Rectangle {
         left: parent.left
         leftMargin:height/3
     }
-    width:currentWidth *CSJ.TopBarWidth/CSJ.ScreenWidth
-    height: currentHeight * CSJ.TopBarHeight/CSJ.ScreenHeight
+    width:304 * appScaleSize//currentWidth *CSJ.TopBarWidth/CSJ.ScreenWidth
+    height: 35 * appScaleSize//currentHeight * CSJ.TopBarHeight/CSJ.ScreenHeight
     color:"transparent"
     radius: height*2/7
     z: 1
@@ -47,7 +47,7 @@ Rectangle {
         height: fastBlur.height
         visible: false
         sourceRect: Qt.rect(getItemX(width,height),getItemY(width,height),width,height)
-        sourceItem: albumView
+        sourceItem: gridView.isCrossScreen ? gridView : tabBar
 
         function getItemX(width,height) {
             var mapItem = eff.mapToItem(albumView,eff.x,eff.y,width,height)
@@ -81,7 +81,7 @@ Rectangle {
     OpacityMask{
         id:mask
         anchors.fill: maskRect
-        visible: true
+        visible: gridView.isCrossScreen
         source: fastBlur
         maskSource: maskRect
     }
@@ -187,9 +187,10 @@ Rectangle {
                         left: parent.left
                         leftMargin: (parent.width-btnImage.width-btnContent.contentWidth- btn.height/4)/2
                     }
-                    width: btn.height/2
+                    width: 22 //* appScaleSize//btn.height/2
                     height: width
                     source:getImageSource()
+//                    sourceSize: Qt.size(width,height)
 
                     function getImageSource() {
                         switch(index) {
@@ -213,7 +214,7 @@ Rectangle {
                     }
                     text: qsTr(listModel.get(index).title)
                     color: "#000000"
-                    font.pointSize: root.defaultFontSize + 2
+                    font.pixelSize: root.defaultFontSize
                 }
             }
             background: Rectangle {

@@ -13,7 +13,7 @@ import QtQuick.Window 2.2
 import QtQuick.Controls 2.10 as Controls
 import QtGraphicalEffects 1.0 as Effects
 import QtQuick.Layouts 1.3
-import org.kde.kirigami 2.13 as Kirigami
+import org.kde.kirigami 2.15 as Kirigami
 import org.kde.jinggallery 0.2 as Koko
 import org.kde.kquickcontrolsaddons 2.0 as KQA
 
@@ -28,6 +28,9 @@ Kirigami.Page {
     property var currentMimeType
     property var imageGridView
     property bool isFirstOpenPage: true
+    property string imageDetailTitle
+    property int defaultFontSize : 14//theme.defaultFont.pointSize
+    property var appScaleSize: width / 888
 
     signal backToPage
 
@@ -67,7 +70,6 @@ Kirigami.Page {
     }
 
     Component.onCompleted: {
-        console.log("page onCompleteed")
         applicationWindow().controlsVisible = true
         listView.forceActiveFocus()
     }
@@ -97,26 +99,26 @@ Kirigami.Page {
         }
     }
 
-    ShareDialog {
-        id: shareDialog
+    // ShareDialog {
+    //     id: shareDialog
 
-        inputData: {
-            "urls": [],
-            "mimeType": ["image/", "video/"]
-        }
+    //     inputData: {
+    //         "urls": [],
+    //         "mimeType": ["image/", "video/"]
+    //     }
 
-        onFinished: {
-            if (error == 0 && output.url !== "") {
-                console.assert(output.url !== undefined)
-                var resultUrl = output.url
-                console.log("Received", resultUrl)
-                notificationManager.showNotification(true, resultUrl)
-                clipboard.content = resultUrl
-            } else {
-                notificationManager.showNotification(false)
-            }
-        }
-    }
+    //     onFinished: {
+    //         if (error == 0 && output.url !== "") {
+    //             console.assert(output.url !== undefined)
+    //             var resultUrl = output.url
+    //             console.log("Received", resultUrl)
+    //             notificationManager.showNotification(true, resultUrl)
+    //             clipboard.content = resultUrl
+    //         } else {
+    //             notificationManager.showNotification(false)
+    //         }
+    //     }
+    // }
 
     onActiveFocusChanged: {
         if (!activeFocus && listView.isPlayImageClick) {
@@ -146,7 +148,7 @@ Kirigami.Page {
         highlightRangeMode: ListView.StrictlyEnforceRange
         interactive: !imageEditTitle.visible
         model: gradviewModel
-
+        spacing: 10 * appScaleSize
         onThumbnailChanged: {
             console.info("onThumbnailChanged:path:" + path + " index::" + index)
             gradviewModel.updatePreview(path, index)
@@ -165,6 +167,9 @@ Kirigami.Page {
                 var cropIndex = gradviewModel.sourceModel.findIndex(
                             currentCropPath)
                 listView.currentIndex = cropIndex > -1 ? cropIndex : listView.currentIndex
+            }
+            if(count === 0){
+                applicationWindow().pageStack.layers.pop()
             }
         }
 
@@ -199,7 +204,7 @@ Kirigami.Page {
 
             width: root.width
             height: root.height
-            mimeType: model.mimeType
+            mediaType: model.mediaType
             duration: model.duration
             imageTime: model.imageTime
             imagePath: model.previewurl
@@ -208,6 +213,7 @@ Kirigami.Page {
             delegate: listView.currentItem
             index: listView.currentIndex
             mIndex: model.index
+            isGif: model.mimeType === "image/gif"
 
             Component.onCompleted: {
                 if (!setCacheTimer.running & listView.cacheBuffer != listView.width * 5) {
@@ -248,6 +254,7 @@ Kirigami.Page {
         height: parent.height
         width: leftArrow.width + 20
         color: "transparent"
+        visible: listView.currentIndex !== 0
 
         MouseArea {
             width: parent.width
@@ -255,7 +262,6 @@ Kirigami.Page {
             hoverEnabled: true
 
             onEntered: {
-                console.info("qml leftItem arrow--" + leftArrow.opacity)
                 leftArrow.opacity = 1.0
             }
 
@@ -273,6 +279,8 @@ Kirigami.Page {
                 verticalCenter: parent.verticalCenter
             }
             source: "qrc:/assets/leftarrow.png"
+            width: 30 * appScaleSize
+            height: width
             sourceSize: Qt.size(60, 60)
             opacity: 0.0
 
@@ -305,6 +313,7 @@ Kirigami.Page {
         height: parent.height
         width: rightArrow.width
         color: "transparent"
+        visible: listView.currentIndex !== (listView.count - 1)
 
         MouseArea {
             anchors.fill: parent
@@ -329,6 +338,8 @@ Kirigami.Page {
             }
             source: "qrc:/assets/rightarrow.png"
             sourceSize: Qt.size(60, 60)
+            width: 30 * appScaleSize
+            height: width
             opacity: 0.0
 
             MouseArea {
@@ -372,6 +383,39 @@ Kirigami.Page {
         }
     }
 
+    function openWallpaperView(imageUrl){
+        // applicationWindow().pageStack.layers.push(wallpaperComponent,{'source':imageUrl})
+        wallpaperUrl = imageUrl
+        wallpaperLoader.active = true
+    }
+
+    function popWallpaperView(){
+        // applicationWindow().pageStack.layers.pop()
+        // wallpaperItem.visible = false
+        wallpaperLoader.active = false
+
+    }
+
+    Component{
+        id:wallpaperComponent
+        Kirigami.JWallPaperItem{
+            id:wallpaperItem
+            source: wallpaperUrl
+            onSetWallPaperFinished:{
+                popWallpaperView()
+            }
+            onCancel:{
+                popWallpaperView()
+            }
+        }
+    }
+property var wallpaperUrl
+    Loader{
+        id:wallpaperLoader
+        sourceComponent: wallpaperComponent
+        active: false
+    }
+
     ImageEditTitle {
         id: imageEditTitle
 
@@ -382,8 +426,9 @@ Kirigami.Page {
         }
         visible: isFirst
         isVideoScreen: listView.currentItem.isVideo
-        titleName: listView.currentItem.display
+        titleName: imageDetailTitle//listView.currentItem.display
         titleDateTime: getDateTime()
+        isGifImage:listView.currentItem.isGif
 
         onVisibleChanged: {
             if (!visible && isRotateImage) {
@@ -411,6 +456,9 @@ Kirigami.Page {
 
         onDeleteClicked: {
             listView.currentItem.deleteItemClicked()
+        }
+        onMagicClicked: {
+            openWallpaperView(listView.currentItem.imagePath)
         }
     }
 }

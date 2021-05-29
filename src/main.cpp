@@ -18,6 +18,7 @@
 #include <KLocalizedContext>
 #include <KLocalizedString>
 #include <KAboutData>
+#include <KDBusService>
 
 #include <QApplication>
 #include <QCommandLineOption>
@@ -26,6 +27,7 @@
 #include <QQuickStyle>
 
 #include <iostream>
+#include <QDateTime>
 
 #include "filesystemtracker.h"
 #include "mediastorage.h"
@@ -41,7 +43,7 @@
 
 int main(int argc, char **argv)
 {
-
+    qint64 startTime = QDateTime::currentMSecsSinceEpoch();
     KLocalizedString::setApplicationDomain("Photos");
     KAboutData aboutData(QStringLiteral("Photos"),
                          xi18nc("@title", "<application>Photos</application>"),
@@ -76,8 +78,10 @@ int main(int argc, char **argv)
     KAboutData::setApplicationData(aboutData);
 
     QApplication app(argc, argv);
+    app.setAttribute(Qt::AA_UseHighDpiPixmaps, true);
     app.setApplicationDisplayName("Photos");
     app.setOrganizationDomain("kde.org");
+    KDBusService* service = new KDBusService(KDBusService::Unique | KDBusService::Replace,&app);
 
     QCommandLineParser parser;
     parser.addOption(QCommandLineOption("reset", i18n("Reset the database")));
@@ -111,7 +115,7 @@ int main(int argc, char **argv)
         CommandLinePath = comlinePath.path();
     } else {
         MediaStorage::DATA_TABLE_NAME = "files";
-        QStringList locations = QStandardPaths::standardLocations(QStandardPaths::PicturesLocation);
+        QStringList locations = QStandardPaths::standardLocations(QStandardPaths::HomeLocation);
         Q_ASSERT(locations.size() >= 1);
         checkPaths = locations.first();
     }
@@ -151,6 +155,8 @@ int main(int argc, char **argv)
     engine.rootContext()->setContextProperty(QStringLiteral("jinggalleryAboutData"), QVariant::fromValue(aboutData));
 
     engine.rootContext()->setContextProperty("CommandLineInto", CommandLinePath);
+    engine.rootContext()->setContextProperty("MainStartTime",startTime);
+
     qmlRegisterType<ResizeHandle>("org.kde.jinggallery.private", 1, 0, "ResizeHandle");
     qmlRegisterType<ResizeRectangle>("org.kde.jinggallery.private", 1, 0, "ResizeRectangle");
 
@@ -165,7 +171,7 @@ int main(int argc, char **argv)
     } else {
         engine.load(QUrl(QStringLiteral("qrc:/qml/desktopMain.qml")));
     }
-
+    qint64 endTime = QDateTime::currentMSecsSinceEpoch();
     int rt = app.exec();
     trackerThread.quit();
     return rt;

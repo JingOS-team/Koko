@@ -17,7 +17,7 @@ class Roles : public QObject
 public:
     Roles(QObject *parent);
     ~Roles();
-    enum RoleNames { MediaUrlRole = Qt::UserRole + 1, MimeTypeRole, Thumbnail, ThumbnailPixmap, PreviewUrlRole, DurationRole, ItemTypeRole, FilesRole, FileCountRole, DateRole, SelectedRole, SourceIndex, DateTimeRole };
+    enum RoleNames { MediaUrlRole = Qt::UserRole + 1, MimeTypeRole, Thumbnail, ThumbnailPixmap, PreviewUrlRole, DurationRole, ItemTypeRole, FilesRole, FileCountRole, DateRole, SelectedRole, SourceIndex, DateTimeRole,MediaTypeRole };
 };
 
 #endif

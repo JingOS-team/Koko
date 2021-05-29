@@ -24,9 +24,9 @@ import org.kde.jinggallery.private 1.0 as KokoComponent
 
 KokoComponent.ResizeHandle {
 
-    property int rhHeight:width/10
+    property int rhHeight:width/12
 
-    width: 60
+    width: 36 * appScaleSize
     height: width
     scale: 1
 
@@ -46,12 +46,12 @@ KokoComponent.ResizeHandle {
         width:parent.width
         height:rhHeight
 
-        Kirigami.Theme.colorSet: Kirigami.Theme.View
-        color: Kirigami.Theme.backgroundColor
-        shadow {
-            size: 4
-            color: "transparent"
-        }
+//        Kirigami.Theme.colorSet: Kirigami.Theme.View
+        color: "white"//Kirigami.Theme.backgroundColor
+//        shadow {
+//            size: 4
+//            color: "transparent"
+//        }
 
     }
 
@@ -64,11 +64,11 @@ KokoComponent.ResizeHandle {
         width:rhHeight
         height:parent.width
         
-        Kirigami.Theme.colorSet: Kirigami.Theme.View
+//        Kirigami.Theme.colorSet: Kirigami.Theme.View
         color: "white"
-        shadow {
-            size: 4
-            color: "transparent"
-        }
+//        shadow {
+//            size: 4
+//            color: "transparent"
+//        }
     }
 }

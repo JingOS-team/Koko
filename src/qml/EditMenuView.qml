@@ -14,40 +14,58 @@ import org.kde.kirigami 2.15
 Menu {
     id: menu
 
-    property int mwidth: root.width * CSJ.Left_view_Edit_Menu_width / CSJ.ScreenWidth
-    property int mheight: root.height * CSJ.Left_view_Edit_Menu_height / CSJ.ScreenHeight
-    property var separatorColor: "#4DFFFFFF"
-    property int separatorWidth: mwidth * 9 / 10
+    property int mwidth: 200 * appScaleSize//root.screen.width * CSJ.Left_view_Edit_Menu_width / CSJ.ScreenCurrentWidth
+    property int m_menItemHeight: 180 * heightScaleSize / 4//(root.screen.height * CSJ.Left_view_Edit_Menu_height / CSJ.ScreenCurrentHeight) / 4
+    property int mheight: m_menItemHeight * menuItemCount
+    //black #4DFFFFFF
+    property var separatorColor: "#4Dffffff"
+    property int separatorWidth: mwidth * 8 / 10
     property int mouseX
     property int mouseY
+    property int menuItemCount: menu.count
+    property int backRadius: 12 * appScaleSize
     property bool hasSelectItem
     property bool isbulkVisible
     property var tabSelectText
     property int selectCount
-
     signal bulkClicked
     signal deleteClicked
     signal renameClicked
     signal saveClicked
 
+    padding: 0
+    margins: 0
+    modal:true
+    closePolicy:Popup.CloseOnEscape | Popup.CloseOnReleaseOutside
+    Overlay.modal: Rectangle {
+        color: "#00000000"
+    }
     function rmBulkAction() {
         var ba = menu.actionAt(0)
         if (ba.text === CSJ.Left_View_Edit_Menu_Bulk) {
             menu.takeAction(0)
         }
+        if(menu.count > 1){
+            var nameAction = menu.actionAt(1)
+            if (nameAction.text === CSJ.Left_View_Edit_Menu_Rename) {
+                menu.takeAction(1)
+            }
+        }
     }
-
     function addBulkAction() {
         var ba = menu.actionAt(0)
         if (ba.text !== CSJ.Left_View_Edit_Menu_Bulk) {
             menu.insertAction(0, bulkAction)
         }
+//        var nameAction = menu.actionAt(menu.count - 1)
+//        if (nameAction.text !== CSJ.Left_View_Edit_Menu_Rename) {
+//            menu.insertAction(2, renameAction)
+//        }
     }
 
     Action {
         id: bulkAction
-
-        text: qsTr(CSJ.Left_View_Edit_Menu_Bulk)
+        text: i18n(CSJ.Left_View_Edit_Menu_Bulk)
         checkable: true
         checked: false
         onCheckedChanged: {
@@ -56,56 +74,30 @@ Menu {
     }
 
     Action {
-        id: deleteAction
-
-        text: qsTr(CSJ.Left_View_Edit_Menu_Delete)
-        checkable: true
-        checked: false
-
-        onCheckedChanged: {
-            if (isbulkVisible) {
-                if (hasSelectItem) {
-                    deleteDialog.open()
-                }
-            } else {
-                deleteDialog.open()
-            }
-        }
-    }
-
-    Action {
-        id: saveAction
-
-        text: qsTr(CSJ.Left_View_Edit_Menu_Save)
+        text: i18n(CSJ.Left_View_Edit_Menu_Delete)
         checkable: true
         checked: false
         onCheckedChanged: {
-            saveClicked()
+            deleteDialog.open()
         }
     }
 
-    AlertDialog {
-        id: deleteDialog
-
-        msgContent: updateMsg(tabSelectText, selectCount)
-        onDialogLeftClicked: {
-            deleteDialog.close()
-        }
-        onDialogRightClicked: {
-            deleteClicked()
-            deleteDialog.close()
-        }
-    }
+//    Action {
+//        text: i18n(CSJ.Left_View_Edit_Menu_Save)
+//        checkable: true
+//        checked: false
+//        onCheckedChanged: {
+//            saveClicked()
+//        }
+//    }
 
     delegate: MenuItem {
         id: menuItem
-
-        anchors {
-            left: parent.left
-            right: parent.right
-        }
         width: menu.mwidth
-        height: mheight / 4
+        height: mheight / menuItemCount
+        implicitWidth: menu.mwidth
+        implicitHeight: mheight / menuItemCount
+        padding: 0
         opacity: menuItem.text === CSJ.Left_View_Edit_Menu_Save ? 0.5 : 1.0
 
         MouseArea {
@@ -114,9 +106,8 @@ Menu {
         }
 
         arrow: Canvas {
-            x: parent.width - width
-            width: 40
-            height: 40
+            width: 0
+            height: 0
             visible: menuItem.subMenu
             onPaint: {
                 var ctx = getContext("2d")
@@ -136,31 +127,37 @@ Menu {
 
         contentItem: Item {
             id: munuContentItem
+            height: mheight / menuItemCount
+            implicitWidth: getAllWidth()
 
-            width: menuItem.width
-            height: mheight / 4
+            function getAllWidth() {
+                return menu.mwidth
+            }
             Text {
+                anchors {
+                    left: parent.left
+                    verticalCenter: parent.verticalCenter
+                }
                 leftPadding: mwidth / 20
                 text: menuItem.text
-                font.pointSize: root.defaultFontSize + 2
-                anchors.verticalCenter: parent.verticalCenter
-                color: menuItem.highlighted ? "#000000" : "#000000"
+                font.pixelSize: defaultFontSize
+                //black #ffffff
+                color: menuItem.highlighted ? "#3C3F48" : "#3C3F48"
                 horizontalAlignment: Text.AlignLeft
                 verticalAlignment: Text.AlignVCenter
                 elide: Text.ElideRight
             }
-            JIconButton {
+            Image {
                 id: rightImage
-
+                width: height
+                height: 16
                 anchors {
                     right: parent.right
-                    rightMargin: mwidth / 10
+                    rightMargin: mwidth / 20
+                    verticalCenter: parent.verticalCenter
                 }
-                anchors.verticalCenter: parent.verticalCenter
-                width: height
-                height: parent.height / 2 + 10
+//                sourceSize: Qt.size(32,32)
                 source: getSource()
-
                 function getSource() {
                     switch (menuItem.text) {
                     case CSJ.Left_View_Edit_Menu_Bulk:
@@ -175,62 +172,72 @@ Menu {
                     return ""
                 }
             }
+
+
         }
 
         background: Item {
             width: menu.mwidth
-            height: mheight / 4
+            height: mheight / menuItemCount
             implicitWidth: menu.mwidth
             implicitHeight: mheight / menuItemCount
             clip: true
-
-            Rectangle {
-                anchors.fill: parent
-                anchors.bottomMargin: menu.currentIndex === 0 ? -radius : 0
-                anchors.topMargin: menu.currentIndex === menu.count - 1 ? -radius : 0
-                radius: menu.currentIndex === 0
-                        || menu.currentIndex === menu.count - 1 ? 20 : 0
-                color: menuItem.highlighted ? "#2E747480" : "transparent"
-            }
             Rectangle {
                 id: bline
-
-                anchors.bottom: parent.bottom
-                anchors.horizontalCenter: parent.horizontalCenter
                 width: separatorWidth
                 height: 1
-                visible: menuItem.text !== CSJ.Left_View_Edit_Menu_Save
+                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: menuItemCount === 3 ? (menuItem.text !== CSJ.Left_View_Edit_Menu_Rename):(menuItem.text !== CSJ.Left_View_Edit_Menu_Delete)
                 color: separatorColor
             }
+            Rectangle {
+                anchors.fill: parent
+                anchors.bottomMargin: menuItemCount === 1 ? 0 : (menu.currentIndex === 0 ? -radius : 0)
+                anchors.topMargin: menuItemCount === 1 ? 0 :  (menu.currentIndex === menu.count - 1 ? -radius : 0)
+                radius: menuItemCount === 1 ? backRadius : (menu.currentIndex === 0
+                        || menu.currentIndex === menu.count - 1 ? backRadius : 0)
+                color: menuItemCount === 1 ? "transparent" : (menuItem.highlighted ? "#2E747480" : "transparent")
+            }
+
         }
     }
 
     background: Rectangle {
+        id: mBr
+
+        property string shadowColor: "#80C3C9D9"
+
         width: mwidth
-        color: "#60FFFFFF"
-        border.width: 0
-        radius: height / 10
+        implicitWidth: mwidth
+        //black #CC000000
+        color: "#00000000"
+        radius: backRadius
+
+        border {
+            width: 1
+            color: "#C7D3DBEE"
+        }
+        layer.enabled: true
+        layer.effect: DropShadow {
+            id: rectShadow
+            anchors.fill: mBr
+            color: mBr.shadowColor
+            source: mBr
+            samples: 9
+            radius: 4
+            horizontalOffset: 0
+            verticalOffset: 0
+            spread: 0
+        }
         ShaderEffectSource {
             id: eff
-
-            anchors.centerIn: fastBlur
             width: fastBlur.width
             height: fastBlur.height
+            sourceItem: page
+            anchors.centerIn: fastBlur
             visible: false
-            sourceItem: albumView
             sourceRect: Qt.rect(mouseX, mouseY, width, height)
-
-            function getItemX(width, height) {
-                var mapItem = eff.mapToItem(albumView, mouseX, mouseY,
-                                            width, height)
-                return mapItem.x
-            }
-
-            function getItemY(width, height) {
-                var mapItem = eff.mapToItem(albumView, mouseX, mouseY,
-                                            width, height)
-                return mapItem.y
-            }
         }
         FastBlur {
             id: fastBlur
@@ -240,10 +247,11 @@ Menu {
             cached: true
             visible: false
         }
+
         Rectangle {
             id: maskRect
             anchors.fill: fastBlur
-            radius: height / 10
+            radius: backRadius
             visible: false
             clip: true
         }
@@ -254,12 +262,13 @@ Menu {
             source: fastBlur
             maskSource: maskRect
         }
-
         Rectangle {
+            anchors.fill: mBr
+            radius: backRadius
+            visible: true
+            //black #4D000000
             color: "#99FFFFFF"
-            width: parent.width
-            height: parent.height
-            radius: height / 10
+            clip: true
         }
     }
 }

@@ -9,11 +9,12 @@
 
 QImageItem::QImageItem(QQuickItem *parent)
     : QQuickPaintedItem(parent),
-      m_smooth(false),
+      m_smooth(true),
       m_fillMode(QImageItem::Stretch)
 {
     setFlag(ItemHasContents, true);
     setRenderTarget(RenderTarget::FramebufferObject);
+    setTextureSize(QSize(4800,4800));
 }
 
 QImageItem::~QImageItem()

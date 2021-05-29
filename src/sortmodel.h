@@ -18,6 +18,7 @@
 #include <kimagecache.h>
 #include <kshareddatacache.h>
 #include "mediamimetypemodel.h"
+#include <QItemSelection>
 
 namespace Jungle
 {
@@ -86,6 +87,7 @@ public:
     Q_INVOKABLE int sourceIndex(const int &indexValue);
     Q_INVOKABLE QJsonArray selectedMedias();
     Q_INVOKABLE void updatePreview(const QString &url, const int &indexValue);
+    Q_INVOKABLE int updateSelectCount();
 
 protected Q_SLOTS:
     void setContainMedias(bool);
@@ -104,6 +106,7 @@ signals:
 private:
     QByteArray m_sortRoleName;
     QItemSelectionModel *m_selectionModel;
+    QItemSelection m_selections;
     QTimer *m_previewTimer;
     QHash<QUrl, QPersistentModelIndex> m_filesToPreview;
     QSize m_screenshotSize;

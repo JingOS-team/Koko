@@ -29,6 +29,7 @@ class ResizeHandle: public QQuickItem
     Q_PROPERTY(Corner resizeCorner MEMBER m_resizeCorner NOTIFY resizeCornerChanged)
     Q_PROPERTY(bool resizeBlocked READ resizeBlocked NOTIFY resizeBlockedChanged)
     Q_PROPERTY(QQuickItem *rectangle READ rectangle WRITE setRectangle NOTIFY rectangleChanged)
+    Q_PROPERTY(QRectF moveAreaRect READ moveAreaRect WRITE setMoveAreaRect NOTIFY moveRectChanged)
 
 public:
     enum Corner {
@@ -46,6 +47,15 @@ public:
     ResizeHandle(QQuickItem *parent = nullptr);
     ~ResizeHandle() = default;
 
+    QRectF moveAreaRect() {
+        return m_moveArea;
+    }
+
+    void setMoveAreaRect(const QRectF &moveArea) {
+        m_moveArea = moveArea;
+        Q_EMIT moveRectChanged();
+    }
+
     QQuickItem *rectangle() const;
     void setRectangle(QQuickItem *rectangle);
 
@@ -60,6 +70,9 @@ Q_SIGNALS:
     void resizeCornerChanged();
     void resizeBlockedChanged();
     void rectangleChanged();
+    void onReleased();
+    void moveRectChanged();
+
 
 private:
     inline bool resizeLeft() const;
@@ -75,4 +88,6 @@ private:
     bool m_resizeWidthBlocked = false;
     bool m_resizeHeightBlocked = false;
     QQuickItem *m_rectangle = nullptr;
+    QRectF m_moveArea;
+
 };

@@ -26,6 +26,8 @@
         <file>qml/BasicResizeRightHandle.qml</file>
         <file>qml/AlertDialog.qml</file>
         <file>qml/imagethread.mjs</file>
+        <file>qml/LoadAnimaView.qml</file>
+        <file>qml/PhotoImagePreview.qml</file>
     </qresource>
     <qresource prefix="/assets">
         <file alias="all.png">assets/all.png</file>
@@ -56,5 +58,8 @@
         <file alias="rightarrow.png">assets/rightarrow.png</file>
         <file alias="video_default.png">assets/video_default.png</file>
         <file alias="crop_rotate.png">assets/crop_rotate.png</file>
+        <file alias="null_image.png">assets/null_image.png</file>
+        <file alias="null_video.png">assets/null_video.png</file>
+        <file alias="null_all.png">assets/null_all.png</file>
     </qresource>
 </RCC>

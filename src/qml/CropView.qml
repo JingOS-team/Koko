@@ -15,16 +15,17 @@ import "common.js" as CSJ
 Item {
     id: cropView
 
-    property int cropImageMaxHeight: cropView.height * CSJ.Item_Crop_Heigh
-                                     / CSJ.Item_Crop_View_Heigh
+    property int cropImageMaxHeight: 515 * appScaleSize//cropView.height * CSJ.Item_Crop_Heigh / CSJ.Item_Crop_View_Heigh
     property int cropImageMaxWidth: cropView.width * 4 / 5
-    property int cropImageHeight: cropView.height * CSJ.Item_Crop_Heigh / CSJ.Item_Crop_View_Heigh
+    property int cropImageHeight: 515 * appScaleSize//cropView.height * CSJ.Item_Crop_Heigh / CSJ.Item_Crop_View_Heigh
     property int cropImageWidth: cropView.width * 4 / 5
 
     width: parent.width
     height: parent.height
 
     Component.onCompleted: {
+        imageDoc.path = imagePath
+        rotateCount = 0
         cropImageHeight = cropEditImage.paintedHeight
         cropImageWidth = cropEditImage.paintedWidth
     }
@@ -37,8 +38,12 @@ Item {
     Connections {
         target: imageDoc
         onVisualImageChanged: {
+
             cropImageWidth = cropEditImage.paintedWidth
             cropImageHeight = cropEditImage.paintedHeight
+            recAnima.width = cropImageWidth
+            recAnima.height = cropImageHeight
+            recAnima.running = true
         }
     }
 
@@ -46,6 +51,11 @@ Item {
         id: flickable
 
         anchors.centerIn: cropView
+//        anchors{
+//         right: rightToolView.left
+//         rightMargin: 16 * appScaleSize
+//         verticalCenter: cropView.verticalCenter
+//        }
         width: cropImageWidth
         height: cropImageHeight
         contentWidth: width
@@ -54,6 +64,18 @@ Item {
         contentY: cropEditImage.y
         interactive: contentWidth > width || contentHeight > height
         clip: true
+
+        onWidthChanged: {
+            contentWidth = width
+        }
+        onHeightChanged: {
+            contentHeight = height
+        }
+
+        Component.onCompleted: {
+            cropImageMaxWidth = flickable.width
+            cropImageMaxHeight = flickable.height
+        }
 
         QQC2.ScrollBar.vertical: QQC2.ScrollBar {
             visible: !applicationWindow().controlsVisible
@@ -67,8 +89,9 @@ Item {
 
             property real initialWidth
             property real initialHeight
+            property int maxScale: 3
 
-            pinch.maximumScale: 3.0
+            pinch.maximumScale: 2
             pinch.minimumScale: 0.3
             pinch.dragAxis: Pinch.XAndYAxis
             width: Math.max(flickable.contentWidth, flickable.width)
@@ -102,24 +125,32 @@ Item {
                                 }
                                 var factor = 1 + event.angleDelta.y / 600
                                 zoomAnim.running = false
-                                flickable.resizeContent(
-                                            flickable.contentWidth * factor,
-                                            flickable.contentHeight * factor,
-                                            Qt.point(flickable.width / 2,
-                                                     flickable.height / 2))
+                                var wheelChangeWidth = flickable.contentWidth * factor
+                                if(wheelChangeWidth < flickable.width * imagepinchArea.maxScale && wheelChangeWidth > flickable.width){
+                                    flickable.resizeContent(
+                                                wheelChangeWidth,
+                                                flickable.contentHeight * factor,
+                                                Qt.point(flickable.width / 2,
+                                                         flickable.height / 2))
+                                }
                             } else if (event.pixelDelta.y != 0) {
-                                flickable.resizeContent(
-                                            Math.min(Math.max(
-                                                         flickable.width, flickable.contentWidth
-                                                         + wheel.pixelDelta.y), flickable.width
-                                                     * 4), Math.min(
-                                                Math.max(flickable.height,
-                                                         flickable.contentHeight + wheel.pixelDelta.y),
-                                                flickable.height * 4), event)
+                                var wheelPW = Math.min(Math.max(
+                                                           flickable.width, flickable.contentWidth
+                                                           + wheel.pixelDelta.y), flickable.width
+                                                       * 4)
+                                if(wheelPW < flickable.width * imagepinchArea.maxScale && wheelPW > flickable.width){
+                                    flickable.resizeContent(
+                                                wheelPW , Math.min(
+                                                    Math.max(flickable.height,
+                                                             flickable.contentHeight + wheel.pixelDelta.y),
+                                                    flickable.height * 4), event)
+                                }
                             }
                         } else {
-                            flickable.contentX += event.pixelDelta.x
-                            flickable.contentY += event.pixelDelta.y
+                            if(flickable.contentWidth > flickable.width || flickable.contentHeight > flickable.height){
+                                flickable.contentX += event.pixelDelta.x
+                                flickable.contentY += event.pixelDelta.y
+                            }
                         }
                     }
                 }
@@ -142,19 +173,62 @@ Item {
             }
 
             onPinchUpdated: {
+//                console.log(" pinch scale update:" + pinch.scale + " initialWidth:" + initialWidth)
                 flickable.resizeContent(initialWidth * pinch.scale,
                                         initialHeight * pinch.scale,
                                         pinch.center)
             }
 
             onPinchFinished: {
+                var changeWidth = initialWidth * pinch.scale
+                var changeHeight = initialHeight * pinch.scale
                 if (pinch.scale < 1.0
                         && flickable.contentWidth < flickable.width) {
-                    zoomAnim.currentWidth = initialWidth * pinch.scale
-                    zoomAnim.currentHeight = initialHeight * pinch.scale
+                    zoomAnim.currentWidth = changeWidth
+                    zoomAnim.currentHeight = changeHeight
                     zoomAnim.width = flickable.width
                     zoomAnim.height = flickable.height
                     zoomAnim.running = true
+                }
+
+                if(changeWidth > flickable.width * maxScale){
+                    flickable.resizeContent(flickable.width * maxScale,
+                                            flickable.height * maxScale,
+                                            pinch.previousCenter)
+                    zoomContent.currentWidth = changeWidth
+                    zoomContent.currentHeight = changeHeight
+                    zoomContent.width = flickable.width * maxScale
+                    zoomContent.height = flickable.height * maxScale
+                    zoomContent.running = true
+                }
+            }
+
+            ParallelAnimation {
+                id: zoomContent
+
+                property real x: 0
+                property real y: 0
+                property real width: flickable.width
+                property real height: flickable.height
+                property real currentWidth: flickable.contentWidth
+                property real currentHeight: flickable.contentHeight
+
+                NumberAnimation {
+                    target: flickable
+                    property: "contentWidth"
+                    from: currentWidth
+                    to: zoomContent.width
+                    duration: Kirigami.Units.longDuration
+                    easing.type: Easing.InOutQuad
+                }
+
+                NumberAnimation {
+                    target: flickable
+                    property: "contentHeight"
+                    from: currentHeight
+                    to: zoomContent.height
+                    duration: Kirigami.Units.longDuration
+                    easing.type: Easing.InOutQuad
                 }
             }
 
@@ -208,31 +282,79 @@ Item {
     }
 
     VagueBackground {
+        id:vabView
         anchors.centerIn: flickable
         width: flickable.width
         height: flickable.height
         sourceView: flickable
     }
 
+    NumberAnimation {
+        id:vabAnima
+        target: vabView
+        property: "opacity"
+        from: 0
+        to: 1
+        duration: 250
+        easing.type: Easing.InOutQuad
+    }
+
+    Rectangle{
+      anchors.fill: vabView
+      color: "#80000000"
+      visible: vabView.visible
+    }
+
     KokoComponent.ResizeRectangle {
         id: resizeRectangle
 
         property bool isComponent
-        property int itemMargins: -6
+        property int itemMargins: - rzTopLeft.rhHeight
+        property bool isRectChanged
+        property int whiteLineWidth: 1
 
-        width: cropImageWidth
-        height: cropImageHeight
+        width: cropImageWidth > flickable.width ? flickable.width : cropImageWidth
+        height: cropImageHeight > flickable.height ? flickable.height : cropImageHeight
         x: (cropView.width - Math.min(cropView.width, flickable.width)) / 2
         y: (cropView.height - Math.min(cropView.height, flickable.height)) / 2
+        moveAreaRect: Qt.rect(flickable.x,flickable.y,flickable.width,flickable.height)
+
+
+        onMoveRect: {
+         if(isMove){
+             vabView.visible = false
+         } else {
+             vabView.visible = true
+         }
+        }
 
         onWidthChanged: {
+            isRectChanged = (width !== cropEditImage.width)
+            if(vabView.opacity !== 0){
+                vabAnima.from = 1.0
+                vabAnima.to = 0
+                vabAnima.running = true
+            }
             if (isComponent && doneImage.opacity != 1.0) {
                 doneImage.opacity = 1.0
             }
+            if(!isRectChanged && !recAnima.isRotationImage){
+              doneImage.opacity = 0.5
+            }
         }
         onHeightChanged: {
+            isRectChanged = (height !== cropEditImage.height)
+
+            if(vabView.opacity !== 0){
+                vabAnima.from = 1.0
+                vabAnima.to = 0
+                vabAnima.running = true
+            }
             if (isComponent && doneImage.opacity != 1.0) {
                 doneImage.opacity = 1.0
+            }
+            if(!isRectChanged && !recAnima.isRotationImage){
+              doneImage.opacity = 0.5
             }
         }
 
@@ -243,47 +365,84 @@ Item {
         BasicResizeHandle {
             id: rzTopLeft
 
+            onOnReleased: {
+                if(vabView !== 1){
+                    vabAnima.from = 0
+                    vabAnima.to = 1.0
+                    vabAnima.running = true
+                }
+            }
             rectangle: resizeRectangle
             resizeCorner: KokoComponent.ResizeHandle.TopLeft
+            moveAreaRect:  Qt.rect(flickable.x,flickable.y,flickable.width,flickable.height)
             anchors {
                 left: parent.left
                 leftMargin: resizeRectangle.itemMargins
                 top: parent.top
-                topMargin: resizeRectangle.itemMargins + 1
+                topMargin: resizeRectangle.itemMargins
             }
         }
 
         BasicResizeRightHandle {
             id: rzBottomLeft
 
+            onOnReleased: {
+                if(vabView !== 1){
+                    vabAnima.from = 0
+                    vabAnima.to = 1.0
+                    vabAnima.running = true
+                }
+            }
             rectangle: resizeRectangle
             resizeCorner: KokoComponent.ResizeHandle.BottomLeft
+            moveAreaRect:  Qt.rect(flickable.x,flickable.y,flickable.width,flickable.height)
+
             anchors {
                 left: parent.left
                 bottom: parent.bottom
-                bottomMargin: resizeRectangle.itemMargins
+                bottomMargin: resizeRectangle.itemMargins - resizeRectangle.whiteLineWidth
             }
         }
 
         BasicResizeHandle {
             id: rzBottomRight
 
+            onOnReleased: {
+                if(vabView !== 1){
+                    vabAnima.from = 0
+                    vabAnima.to = 1.0
+                    vabAnima.running = true
+                }
+            }
             rectangle: resizeRectangle
             resizeCorner: KokoComponent.ResizeHandle.BottomRight
+            moveAreaRect:  Qt.rect(flickable.x,flickable.y,flickable.width,flickable.height)
+
             anchors {
                 right: parent.right
-                rightMargin: resizeRectangle.itemMargins
+                rightMargin: resizeRectangle.itemMargins - resizeRectangle.whiteLineWidth
                 bottom: parent.bottom
+                bottomMargin: -resizeRectangle.whiteLineWidth
             }
         }
 
         BasicResizeRightHandle {
             rectangle: resizeRectangle
             resizeCorner: KokoComponent.ResizeHandle.TopRight
+            moveAreaRect:  Qt.rect(flickable.x,flickable.y,flickable.width,flickable.height)
+
+            onOnReleased: {
+                if(vabView !== 1){
+                    vabAnima.from = 0
+                    vabAnima.to = 1.0
+                    vabAnima.running = true
+                }
+            }
             anchors {
                 right: parent.right
                 top: parent.top
-                topMargin: resizeRectangle.itemMargins + 1
+                topMargin: resizeRectangle.itemMargins
+                rightMargin: -resizeRectangle.whiteLineWidth
             }
         }
 
@@ -294,25 +453,32 @@ Item {
             ShaderEffectSource {
                 id: ett
 
+                visible: vabView.visible
                 sourceItem: flickable
                 width: resizeRectangle.width
                 height: resizeRectangle.height
-                sourceRect: Qt.rect(getItemX(resizeRectangle.width,
+                sourceRect: visible ? Qt.rect(getItemX(resizeRectangle.width,
                                              resizeRectangle.height),
                                     getItemY(resizeRectangle.width,
                                              resizeRectangle.height),
                                     resizeRectangle.width,
-                                    resizeRectangle.height)
+                                    resizeRectangle.height) : Qt.rect(getItemX(resizeRectangle.width,
+                                                                                              resizeRectangle.height),
+                                                                                     getItemY(resizeRectangle.width,
+                                                                                              resizeRectangle.height),
+                                                                                     resizeRectangle.width,
+                                                                                     resizeRectangle.height)
 
                 function getItemX(width, height) {
-                    mapToItem(resizeRectangle, ett.x, ett.y)
-                    var mapItem = ett.mapToItem(flickable, ett.x, ett.y,
-                                                width, height)
+                   var mapItem = ett.mapToItem(flickable, 0, 0)
+//                    var mapItem = ett.mapToItem(flickable, ett.x, ett.y,
+//                                                width, height)
                     return mapItem.x
                 }
                 function getItemY(width, height) {
-                    var mapItem = ett.mapToItem(flickable, ett.x, ett.y,
-                                                width, height)
+                    var mapItem = ett.mapToItem(flickable, 0, 0)
+//                    var mapItem = ett.mapToItem(flickable, ett.x, ett.y,
+//                                                width, height)
                     return mapItem.y
                 }
             }
@@ -321,12 +487,12 @@ Item {
                 id: idRow
 
                 anchors.fill: parent
-                spacing: width / 3 - 1
+                spacing: width / 3 - resizeRectangle.whiteLineWidth
                 Repeater {
                     id: btnRepeater
                     model: 4
                     delegate: Rectangle {
-                        width: 1
+                        width: resizeRectangle.whiteLineWidth
                         height: lineRect.height
                         color: "white"
                     }
@@ -336,14 +502,15 @@ Item {
             Column {
                 id: idcolum
 
-                anchors.fill: parent
-                spacing: height / 3 - 1
+                width: parent.width + resizeRectangle.whiteLineWidth
+                height: parent.height
+                spacing: height / 3 - resizeRectangle.whiteLineWidth
                 Repeater {
                     id: cline
                     model: 4
                     delegate: Rectangle {
-                        width: lineRect.width
-                        height: 1
+                        width: idcolum.width
+                        height: resizeRectangle.whiteLineWidth
                         color: "white"
                     }
                 }
@@ -355,6 +522,8 @@ Item {
 
             property real width: resizeRectangle.width
             property real height: resizeRectangle.height
+            property bool isRotationImage
+
             NumberAnimation {
                 target: resizeRectangle
                 property: "width"
@@ -373,7 +542,7 @@ Item {
                 easing.type: Easing.InOutQuad
             }
             onStopped: {
-                if (doneImage.opacity === 1.0) {
+                if (doneImage.opacity === 1.0 && !isRotationImage) {
                     doneImage.opacity = 0.5
                 }
             }
@@ -398,10 +567,10 @@ Item {
         Text {
             id: reduction
 
-            color: rightToolView.isWheel ? "#FFFFFF" : "#99FFFFFF"
-            text: qsTr("Reduction")
+            color: rightToolView.isWheel ? "#FFFFFF" : "#4DFFFFFF"
+            text: i18n("Reduction")
             anchors.horizontalCenter: parent.horizontalCenter
-            font.pointSize: root.defaultFontSize + 2
+            font.pixelSize: root.defaultFontSize
 
             MouseArea {
                 anchors.fill: reduction
@@ -415,20 +584,26 @@ Item {
 
         AlertDialog {
             id: saveDialog
-            titleContent: "Abandoning modification"
-            msgContent: "Are you sure to discard the current modification"
-            rightButtonContent: "Action"
+            titleContent: i18n("Abandoning modification")
+            msgContent:i18n("Are you sure to discard the current modification")
+            rightButtonContent: i18n("Action")
             onDialogLeftClicked: {
                 saveDialog.close()
             }
             onDialogRightClicked: {
+                rootEditorView.rotateCount = 0
+                vabView.visible = false
                 saveDialog.close()
                 cropImageWidth = cropImageMaxWidth
                 cropImageHeight = cropImageMaxHeight
+                flickable.contentWidth = flickable.width
+                flickable.contentHeight = flickable.height
+                recAnima.isRotationImage = false
                 imageDoc.clearUndoImage()
-                recAnima.width = flickable.width
-                recAnima.height = flickable.height
-                recAnima.running = true
+                
+                resizeRectangle.x = flickable.x
+                resizeRectangle.y = flickable.y
+                vabView.visible = true
             }
         }
 
@@ -447,9 +622,21 @@ Item {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
+                    vabView.visible = false
                     cropImageWidth = cropImageMaxWidth
                     cropImageHeight = cropImageMaxHeight
+                    flickable.contentWidth = flickable.width
+                    flickable.contentHeight = flickable.height
+                    recAnima.isRotationImage = true
                     rootEditorView.roatateClicked()
+                    resizeRectangle.x = flickable.x
+                    resizeRectangle.y = flickable.y
+                    vabView.visible = true
+                    if(rootEditorView.rotateCount % 4 == 0){
+                        doneImage.opacity = 0.5
+                    }else {
+                        doneImage.opacity = 1.0
+                    }
                 }
             }
         }

@@ -16,7 +16,8 @@ Item {
 
     property var titleText
     property bool isEditShow: true
-    property int checkboxHeight: root.height * (CSJ.Left_View_Cancel_Height / CSJ.ScreenHeight)
+    property int checkboxHeight: 22 //* appScaleSize//root.height * (CSJ.Left_View_Cancel_Height / CSJ.ScreenHeight)
+    property int skillHeight: 32 //* appScaleSize
     property var colorRow: "#00000000"
     property var editTextContent: "0"
     property ItemCheckBox allCheckBox: itemCheckBox
@@ -61,18 +62,20 @@ Item {
             Rectangle {
                 color: colorRow
                 Layout.fillWidth: true
-                Layout.minimumHeight: checkboxHeight
-                Layout.minimumWidth: (checkboxshowRect.width - checkboxshowRect.immwidth) / 3
+                Layout.minimumHeight: skillHeight
+                Layout.minimumWidth: (checkboxshowRect.width - checkboxshowRect.immwidth) / 2
 
                 ItemCheckBox {
                     id: itemCheckBox
 
                     anchors {
                         left: parent.left
+//                        bottom: parent.bottom
                         verticalCenter: parent.verticalCenter
                     }
                     radiusCB: width / 5
                     width: checkboxHeight
+                    height: width
                     imageSourceDefault: selectCount !== albumView.gridViewCount
                                         && selectCount > 0 ? "qrc:/assets/check_ok.png" : "qrc:/assets/check_default.png"
                     checked: selectCount === albumView.gridViewCount
@@ -91,40 +94,42 @@ Item {
                     id: ltTextView
 
                     anchors {
-                        verticalCenter: parent.verticalCenter
+//                        bottom: itemCheckBox.bottom
+                        verticalCenter: itemCheckBox.verticalCenter
                         left: itemCheckBox.right
-                        leftMargin: 10
+                        leftMargin: 5 * appScaleSize
                     }
+                    verticalAlignment: Text.AlignBottom
                     text: selectCount > albumView.gridViewCount
                           || selectCount < 0 ? 0 : selectCount
                     color: "#000000"
-                    font.pointSize: root.defaultFontSize + 2
+                    font.pixelSize: root.defaultFontSize
                 }
             }
+
+//            Rectangle {
+//                color: colorRow
+//                Layout.fillWidth: true
+//                Layout.minimumHeight: checkboxHeight
+//                Layout.minimumWidth: (checkboxshowRect.width - checkboxshowRect.immwidth) / 3
+//                opacity: 0.5
+
+//                JIconButton {
+//                    id: foldersImage
+
+//                    anchors.verticalCenter: parent.verticalCenter
+//                    anchors.left: parent.left
+//                    width: height
+//                    height: checkboxHeight + 10
+//                    source: selectCount <= 0 ? "qrc:/assets/folders_default.png" : "qrc:/assets/edit_savetofile.png"
+//                }
+//            }
 
             Rectangle {
                 color: colorRow
                 Layout.fillWidth: true
-                Layout.minimumHeight: checkboxHeight
-                Layout.minimumWidth: (checkboxshowRect.width - checkboxshowRect.immwidth) / 3
-                opacity: 0.5
-
-                JIconButton {
-                    id: foldersImage
-
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.left: parent.left
-                    width: height
-                    height: checkboxHeight + 10
-                    source: selectCount <= 0 ? "qrc:/assets/folders_default.png" : "qrc:/assets/edit_savetofile.png"
-                }
-            }
-
-            Rectangle {
-                color: colorRow
-                Layout.fillWidth: true
-                Layout.minimumHeight: checkboxHeight
-                Layout.minimumWidth: (checkboxshowRect.width - checkboxshowRect.immwidth) / 3 - 19
+                Layout.minimumHeight: skillHeight
+                Layout.minimumWidth: (checkboxshowRect.width - checkboxshowRect.immwidth) / 2 - 19
 
                 JIconButton {
                     id: deleteImage
@@ -132,7 +137,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.left: parent.left
                     width: height
-                    height: checkboxHeight + 10
+                    height: skillHeight
                     source: selectCount
                             <= 0 ? "qrc:/assets/delete_default.png" : "qrc:/assets/edit_delete.png"
                 }
@@ -164,7 +169,7 @@ Item {
             Rectangle {
                 color: colorRow
                 Layout.fillWidth: true
-                Layout.minimumHeight: checkboxHeight
+                Layout.minimumHeight: skillHeight
                 Layout.minimumWidth: (checkboxshowRect.width - checkboxshowRect.immwidth) / 3
 
                 JIconButton {
@@ -172,7 +177,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.left: parent.left
                     width: height
-                    height: checkboxHeight + 10
+                    height: skillHeight
                     source: "qrc:/assets/cancel.png"
                 }
                 MouseArea {

@@ -23,8 +23,6 @@
 
 #include <QDataStream>
 #include <QDateTime>
-#include <QGeoAddress>
-#include <QGeoLocation>
 #include <QObject>
 #include <QMutex>
 #include <QMutexLocker>
@@ -44,7 +42,6 @@ typedef struct MediaInfo {
     int width;
     int height;
     int duration;
-    QGeoLocation location;
     QDateTime dateTime;
     bool isChecked;
 } MediaInfo;
