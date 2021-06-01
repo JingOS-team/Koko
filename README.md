@@ -39,8 +39,8 @@ take care of the rest.
 ## Links
 
 - Home: [www.jingos.com](http://www.jingos.com/)
-- Project page: github.com/jingOS-team/jing-photo
-- File issues: github.com/jingOS-team/jing-photo/issues
+- Project page: https://github.com/JingOS-team/photo
+- File issues: https://github.com/JingOS-team/photo/issues
 - Development channel: [www.jingos.com](http://www.jingos.com/)
 
 ## Installing
