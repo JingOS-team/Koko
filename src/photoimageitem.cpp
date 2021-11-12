@@ -1,8 +1,10 @@
 /*
-    SPDX-FileCopyrightText: 2021 Wang Rui <wangrui@jingos.com>
-
-    SPDX-License-Identifier: LGPL-2.0-or-later
-*/
+ * Copyright (C) 2021 Beijing Jingling Information System Technology Co., Ltd. All rights reserved.
+ *
+ * Authors:
+ * Zhang He Gang <zhanghegang@jingos.com>
+ *
+ */
 
 #include "photoimageitem.h"
 #include <QPainter>

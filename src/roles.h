@@ -1,6 +1,6 @@
 /*
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
- * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
+ * SPDX-FileCopyrightText: (C) Zhang He Gang <zhanghegang@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.0-or-later
  */
@@ -17,7 +17,20 @@ class Roles : public QObject
 public:
     Roles(QObject *parent);
     ~Roles();
-    enum RoleNames { MediaUrlRole = Qt::UserRole + 1, MimeTypeRole, Thumbnail, ThumbnailPixmap, PreviewUrlRole, DurationRole, ItemTypeRole, FilesRole, FileCountRole, DateRole, SelectedRole, SourceIndex, DateTimeRole,MediaTypeRole };
+    enum RoleNames { MediaUrlRole = Qt::UserRole + 1,
+                     MimeTypeRole,
+                     Thumbnail,
+                     ThumbnailPixmap,
+                     PreviewUrlRole,
+                     DurationRole,
+                     ItemTypeRole,
+                     FilesRole,
+                     FileCountRole,
+                     DateRole,
+                     SelectedRole,
+                     SourceIndex,
+                     DateTimeRole,
+                     MediaTypeRole };
 };
 
 #endif

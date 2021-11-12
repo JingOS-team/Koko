@@ -1,9 +1,9 @@
-
-
 /*
- * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
+ * Copyright (C) 2021 Beijing Jingling Information System Technology Co., Ltd. All rights reserved.
  *
- * SPDX-License-Identifier: LGPL-2.1-or-later
+ * Authors:
+ * Zhang He Gang <zhanghegang@jingos.com>
+ *
  */
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -32,7 +32,7 @@ Rectangle {
     signal saveToFileClicked
 
     width: parent.width
-    height: 60 * appScaleSize//parent.height * 3 / 40 + 30
+    height: 60 * appScaleSize
     color: "transparent"
 
     ShaderEffectSource {
@@ -169,10 +169,6 @@ Rectangle {
             name: "qrc:/assets/crop.png"
             flag: 1
         }
-//        ListElement {
-//            name: "qrc:/assets/edit_savetofile.png"
-//            flag: 2
-//        }
         ListElement {
             name: "qrc:/assets/magic.png"
             flag: 3
@@ -186,10 +182,6 @@ Rectangle {
     ListModel {
         id: imageVideoModel
 
-//        ListElement {
-//            name: "qrc:/assets/edit_savetofile.png"
-//            flag: 2
-//        }
         ListElement {
             name: "qrc:/assets/delete.png"
             flag: 4

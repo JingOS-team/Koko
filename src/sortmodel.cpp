@@ -1,7 +1,7 @@
 /*
  * SPDX-FileCopyrightText: (C) 2014 Vishesh Handa <vhanda@kde.org>
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
- * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
+ * SPDX-FileCopyrightText: (C) Zhang He Gang <zhanghegang@jingos.com>
  *
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
@@ -22,6 +22,7 @@
 #include <QDBusReply>
 #include <QDBusInterface>
 #include <QDateTime>
+#include <QUrl>
 
 #define SERVICE_NAME            "org.kde.haruna.qtdbus.playvideo"
 
@@ -98,7 +99,23 @@ void SortModel::setSortRoleName(const QByteArray &name)
             return;
         }
     }
-    qDebug() << "Sort role" << name << "not found";
+}
+
+void SortModel::setFilterType(int type)
+{
+    m_currentType = type;
+    invalidateFilter();
+}
+
+bool SortModel::filterAcceptsRow(int source_row, const QModelIndex &source_parent) const
+{
+    if (m_currentType == 2) {
+        return true;
+    }
+    QModelIndex index0 = sourceModel()->index(source_row, 0, source_parent);
+    int sourceType = sourceModel()->data(index0,Roles::MediaTypeRole).toInt();
+    QString sourcePath = sourceModel()->data(index0,Roles::MediaUrlRole).toString();
+     return sourceType == m_currentType;
 }
 
 QHash<int, QByteArray> SortModel::roleNames() const
@@ -119,16 +136,19 @@ QVariant SortModel::data(const QModelIndex &index, int role) const
     switch (role) {
     case Roles::ThumbnailPixmap: {
         QString imageUrl = QString(/*"file://" + */ data(index, Roles::PreviewUrlRole).toString());
-        QUrl thumbnailSource(imageUrl);
-        KFileItem item(thumbnailSource, QString());
-        QPixmap preview;
+        if(imageUrl != ""){
+            QUrl thumbnailSource(imageUrl);
+            KFileItem item(thumbnailSource, QString());
+            QPixmap preview;
 
-        if (m_imageCache->findPixmap(item.url().toString(), &preview)) {
-            return "image://imageProvider/"+imageUrl;
+            bool findResult = m_imageCache->findPixmap(item.url().toString(), &preview);
+            if (findResult) {
+                return "image://imageProvider/"+imageUrl;
+            }
+
+            m_previewTimer->start(100);
+            const_cast<SortModel *>(this)->m_filesToPreview[item.url()] = QPersistentModelIndex(index);
         }
-
-        m_previewTimer->start(100);
-        const_cast<SortModel *>(this)->m_filesToPreview[item.url()] = QPersistentModelIndex(index);
         return "";
     }
     case Roles::SelectedRole: {
@@ -160,10 +180,7 @@ QVariant SortModel::data(const QModelIndex &index, int role) const
 void SortModel::deleteItemByModeIndex(int indexValue)
 {
     int si = sourceIndex(indexValue);
-//    beginRemoveRows({},indexValue,indexValue);
-//    sourceModel()->removeRows(indexValue,1, {});
-    qobject_cast<MediaMimeTypeModel*>(sourceModel())->dataRemoveRows(indexValue,1,si, {});
-//    endRemoveRows();
+    qobject_cast<MediaMimeTypeModel*>(sourceModel())->dataRemoveRows(indexValue,1,si,{});
 }
 
 void SortModel::deleteFileByModeIndex(QString path)
@@ -295,10 +312,6 @@ void SortModel::selectAll()
     if (m_selectionModel->hasSelection()) {
         m_selectionModel->clear();
     }
-
-//    if(m_selections.count() > 0){
-//        m_selections.clear();
-//    }
     QModelIndex topLeft;
     QModelIndex bottomRight;
 
@@ -306,7 +319,6 @@ void SortModel::selectAll()
     bottomRight = index(rowCount() - 1, 0, QModelIndex());
     QItemSelection cselection(topLeft, bottomRight);
 
-//    m_selections.select(index(0, 0, QModelIndex()), index(rowCount() - 1, 0, QModelIndex()));
     m_selectionModel->select(cselection, QItemSelectionModel::Select);
 
     emit dataChanged(index(0, 0, QModelIndex()), index(rowCount() - 1, 0, QModelIndex()));
@@ -317,13 +329,13 @@ void SortModel::selectAll()
         if (mimeType.startsWith("image")) {
             m_photoSelectCount++;
             setPhotoSelectCount(m_photoSelectCount);
-            if (m_videoSelectCount > 1) {
+            if(m_videoSelectCount > 1){
                 break;
             }
         } else if (mimeType.startsWith("video")) {
             m_videoSelectCount++;
             setVideoSelectCount(m_videoSelectCount);
-            if (m_photoSelectCount > 1) {
+            if(m_photoSelectCount > 1){
                 break;
             }
         }
@@ -334,15 +346,55 @@ void SortModel::selectAll()
 void SortModel::deleteSelection()
 {
     QList<QUrl> filesToDelete;
-
+    QList<QString> filesEncode;
     foreach (QModelIndex index, m_selectionModel->selectedIndexes()) {
-        QUrl url = data(index, Roles::MediaUrlRole).toUrl();
-        filesToDelete << url ;
+        QVariant itemData = data(index, Roles::MediaUrlRole);
+        QString midStr = itemData.toString();
+
+
+        if(midStr.contains("%")){
+            if(midStr.startsWith("file://")){
+                midStr = midStr.mid(7);
+            }
+            filesEncode << midStr;
+        } else {
+            QUrl url = itemData.toUrl();
+            filesToDelete << url ;
+        }
+    }
+    emit moveToTrashChanged(false);
+    bool dEResult = deleteFiles(filesEncode);
+
+    bool dResult = true;
+    if(filesToDelete.size() > 0){
+        auto trashJob = KIO::trash(filesToDelete, KIO::HideProgressInfo);
+        QObject::connect(trashJob, &KJob::result, [=] (KJob *job) {
+            emit moveToTrashChanged(true);
+                if (job->error()) {
+                    QString errorContent = job->errorString();
+                    qDebug() << "TRAASH ERROR : " << errorContent;
+                    emit errorInfoPopup(errorContent);
+//                    qobject_cast<MediaMimeTypeModel*>(sourceModel())->setDeleteFilesStatus(false);
+                }
+         });
+        trashJob->start();
+    }
+    qDebug() << "Result : " << dResult << " dEResult: " << dEResult;
+    if (!dResult || !dEResult) {
+        emit errorInfoPopup("");
+//        qobject_cast<MediaMimeTypeModel*>(sourceModel())->setDeleteFilesStatus(false);
     }
 
-    auto trashJob = KIO::trash(filesToDelete, KIO::HideProgressInfo);
-    trashJob->exec();
     clearSelections();
+}
+
+bool SortModel::deleteFiles(QList<QString> files)
+{
+    bool doResult = true;
+    foreach(QString itemPath , files){
+        doResult = QFile::moveToTrash(itemPath);
+    }
+    return doResult;
 }
 
 int SortModel::updateSelectCount()
@@ -392,14 +444,12 @@ void SortModel::delayedPreview()
         QUrl file = i.key();
         QPersistentModelIndex index = i.value();
 
-        if (!m_previewJobs.contains(file) && file.isValid()) {
+//        if (!m_previewJobs.contains(file) && file.isValid()) {
             list.append(KFileItem(file, QString(), 0));
             m_previewJobs.insert(file, QPersistentModelIndex(index));
-        }
-
+//        }
         ++i;
     }
-
     if (list.size() > 0) {
         QStringList plugins;
         plugins << KIO::PreviewJob::availablePlugins();
@@ -407,8 +457,8 @@ void SortModel::delayedPreview()
         job->setIgnoreMaximumSize(true);
         connect(job, &KIO::PreviewJob::gotPreview, this, &SortModel::showPreview);
     }
-
     m_filesToPreview.clear();
+
 }
 
 void SortModel::updatePreview(const QString &url, const int &indexValue)

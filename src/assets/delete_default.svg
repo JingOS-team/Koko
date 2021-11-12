@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="45px" height="44px" viewBox="0 0 45 44" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>-mockplus-</title>
+    <defs>
+        <filter id="filter-1">
+            <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0.235294 0 0 0 0 0.235294 0 0 0 0 0.262745 0 0 0 0.300000 0"></feColorMatrix>
+        </filter>
+    </defs>
+    <g id="页面-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="相册-照片-编辑态" transform="translate(-386.000000, -54.000000)">
+            <g id="编组-2" transform="translate(24.000000, -37.000000)">
+                <g id="删除" transform="translate(19.000000, 90.000000)" filter="url(#filter-1)">
+                    <g transform="translate(343.186441, 1.000000)">
+                        <g id="Interface,-Essential/trash-delete-bin" transform="translate(-1.000000, -1.000000)">
+                            <g id="Group" transform="translate(0.990833, 0.990833)">
+                                <path d="M11.0045833,16.506875 L11.0045833,34.8478472 C11.0045833,36.8737351 12.6468899,38.5160417 14.6727778,38.5160417 L29.3455556,38.5160417 C31.3714434,38.5160417 33.01375,36.8737351 33.01375,34.8478472 L33.01375,16.506875 M25.6773611,18.3409722 L25.6773611,31.1796528 M18.3409722,18.3409722 L18.3409722,31.1796528 M8.2534375,11.0045833 L35.7648958,11.0045833 M14.6727778,11.0045805 L15.6705267,8.01133667 C16.169665,6.5127224 17.5720915,5.50191131 19.1516432,5.50228598 L24.8666901,5.50228598 C26.4475917,5.50033047 27.8519108,6.51144015 28.3514749,8.01133667 L29.3455556,11.0045805" id="Shape" stroke="#323232" stroke-width="2.72932331" stroke-linecap="round" stroke-linejoin="round"></path>
+                                <rect id="Rectangle" x="0" y="0" width="44.0183333" height="44.0183333"></rect>
+                            </g>
+                        </g>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

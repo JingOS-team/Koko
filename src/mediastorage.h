@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014  Vishesh Handa <vhanda@kde.org>
- *               2021 Wang Rui <wangrui@jingos.com>
+ *               2021 Zhang He Gang <zhanghegang@jingos.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -28,6 +28,7 @@
 #include <QMutexLocker>
 #include <kdirmodel.h>
 #include <kimagecache.h>
+#include <QStandardPaths>
 
 #include "jinggallery_export.h"
 #include "types.h"
@@ -44,6 +45,7 @@ typedef struct MediaInfo {
     int duration;
     QDateTime dateTime;
     bool isChecked;
+    int rotation;
 } MediaInfo;
 
 class JINGGALLERY_EXPORT MediaStorage : public QObject
@@ -54,9 +56,11 @@ public:
     virtual ~MediaStorage();
 
     Q_INVOKABLE void addMedia(const MediaInfo &ii);
+    Q_INVOKABLE void updateMedia(const MediaInfo &ii);
     void addImage(const QString &filePath);
 
-    void removeMedia(const QString &filePath);
+    void removeMedia(const QList<QString> &filePaths);
+    void removeAllMedia();
     void commit();
 
     static MediaStorage *instance();
@@ -77,22 +81,33 @@ public:
      */
     QList<MediaInfo> allMedias(int size = -1, int offset = 0);
 
+    Q_INVOKABLE bool isExistData(const QString &filePath);
+    int getVideoAngle(const QString &filePath);
+    void emitModelRefresh();
+
     static void reset();
     static QString DATA_TABLE_NAME;
-
+public Q_SLOTS:
+    void getAllMedias();
 protected Q_SLOTS:
     void gotPreviewed(const KFileItem &item, const QPixmap &preview);
     void process();
 
 signals:
     void storageModified();
+    void requestAllMedias();
+    void getAllMediasFinish(QHash<QString,MediaInfo> allMedias);
 
 public:
     KImageCache *m_imageCache;
     QString m_filePath;
+    QString m_thumbFilePath = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/video_thumb";
 
 private:
     mutable QMutex m_mutex;
+    int loadVideoSize = 0;
+    QTimer *m_videoChangedTimer;
+    QTimer *m_refreshChangedTimer;
 };
 
 Q_DECLARE_METATYPE(MediaInfo);

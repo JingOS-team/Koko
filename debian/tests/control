@@ -1,0 +1,3 @@
+Tests: testsuite
+Depends: @builddeps@, build-essential,
+Restrictions: rw-build-tree isolation-container

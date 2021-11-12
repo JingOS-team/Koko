@@ -1,6 +1,6 @@
 /*
  * SPDX-FileCopyrightText: (C) 2015 Vishesh Handa <vhanda@kde.org>
- *                             2021 Wang Rui <wangrui@jingos.com>
+ *                             Zhang He Gang <zhanghegang@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
@@ -26,6 +26,13 @@ ImageProcessorRunnable::ImageProcessorRunnable(QString &filePath, Types::MimeTyp
 {
 }
 
+ImageProcessorRunnable::ImageProcessorRunnable(const QString &filePath, Types::MimeType type, ProcessType processType)
+    : QObject()
+    , m_path(filePath)
+    , m_type(type)
+    , m_processType(processType)
+{
+}
 void ImageProcessorRunnable::run()
 {
     MediaInfo ii;
@@ -51,11 +58,18 @@ void ImageProcessorRunnable::run()
     } else {
         MediaInfoLib::MediaInfo MI;
         if (MI.Open(m_path.toStdWString())) {
-            ii.duration = QString::fromStdWString(MI.Get(MediaInfoLib::Stream_Video, 0, __T("Duration"), MediaInfoLib::Info_Text, MediaInfoLib::Info_Name)).toInt() / 1000;
+            QString durationStr = QString::fromStdWString(MI.Get(MediaInfoLib::Stream_General, 0, __T("Duration")));
+            QString rotationStr = QString::fromStdWString(MI.Get(MediaInfoLib::Stream_Video, 0, __T("Rotation")));
+            ii.duration = (QString::fromStdWString(MI.Get(MediaInfoLib::Stream_General, 0, __T("Duration"), MediaInfoLib::Info_Text, MediaInfoLib::Info_Name)).toInt()) / 1000;
             ii.width = QString::fromStdWString(MI.Get(MediaInfoLib::Stream_Video, 0, __T("Width"), MediaInfoLib::Info_Text, MediaInfoLib::Info_Name)).toInt();
             ii.width = ii.width > 0 ? ii.width : 800;
             ii.height = QString::fromStdWString(MI.Get(MediaInfoLib::Stream_Video, 0, __T("Height"), MediaInfoLib::Info_Text, MediaInfoLib::Info_Name)).toInt();
             ii.height = ii.height > 0 ? ii.height : 600;
+            int svDuration = QString::fromStdWString(MI.Get(MediaInfoLib::Stream_Video, 0, __T("Duration"), MediaInfoLib::Info_Text, MediaInfoLib::Info_Name)).toInt() / 1000;
+            if(ii.duration <= 0 && svDuration > 0){
+                ii.duration = svDuration;
+            }
+            ii.rotation = rotationStr.toDouble();
         } else {
             ii.duration = 0;
             ii.width = 800;
@@ -68,7 +82,13 @@ void ImageProcessorRunnable::run()
             ii.dateTime = QFileInfo(m_path).lastModified();
         }
     }
-    QMetaObject::invokeMethod(MediaStorage::instance(), "addMedia", Qt::AutoConnection, Q_ARG(const MediaInfo &, ii));
-
-    emit finished();
+    if (m_processType == Process_Update) {
+        if (ii.duration > 0) {
+            QMetaObject::invokeMethod(MediaStorage::instance(), "updateMedia", Qt::AutoConnection, Q_ARG(const MediaInfo &, ii));
+            emit finished();
+        }
+    } else {
+        QMetaObject::invokeMethod(MediaStorage::instance(), "addMedia", Qt::AutoConnection, Q_ARG(const MediaInfo &, ii));
+        emit finished();
+    }
 }

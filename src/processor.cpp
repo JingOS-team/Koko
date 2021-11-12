@@ -26,8 +26,10 @@ Processor::Processor(QObject *parent)
         MediaStorage::instance()->commit();
         if (m_files.isEmpty()) {
             m_geoCoder.deinit();
-            if (m_numFiles && m_initialScanDone)
+            if (m_numFiles == 0 && m_initialScanDone){
+                m_isFinished = true;
                 emit finishedChanged();
+            }
         }
     });
 
@@ -47,12 +49,23 @@ void Processor::addFile(const QString &filePath, Types::MimeType type)
     emit numFilesChanged();
 }
 
-void Processor::removeFile(const QString &filePath)
+void Processor::removeFile(const QList<QString> &filePaths)
 {
-    MediaStorage::instance()->removeMedia(filePath);
-    m_numFiles--;
+    MediaStorage::instance()->removeMedia(filePaths);
 
     emit numFilesChanged();
+}
+
+void Processor::updateFile(const QString &filePath, Types::MimeType type)
+{
+    QString updateFilePath = filePath;
+    if (updateFilePath.startsWith("file://")) {
+       updateFilePath = updateFilePath.mid(7);
+    }
+    ImageProcessorRunnable *runnable = new ImageProcessorRunnable(updateFilePath, type,ImageProcessorRunnable::Process_Update);
+    connect(runnable, SIGNAL(finished()), this, SLOT(slotFinished()));
+
+    QThreadPool::globalInstance()->start(runnable);
 }
 
 float Processor::initialProgress() const
@@ -90,6 +103,7 @@ void Processor::process()
 
 void Processor::slotFinished()
 {
+    m_numFiles--;
     m_processing = false;
     QTimer::singleShot(0, this, SLOT(process()));
     emit initialProgressChanged();
@@ -100,6 +114,7 @@ void Processor::initialScanCompleted()
 {
     m_initialScanDone = true;
     if (m_files.isEmpty()) {
+        m_isFinished = true;
         emit finishedChanged();
     }
 }

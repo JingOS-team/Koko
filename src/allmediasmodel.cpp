@@ -1,6 +1,6 @@
 /*
  * SPDX-FileCopyrightText: (C) 2015 Vishesh Handa <vhanda@kde.org>
- * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
+ * SPDX-FileCopyrightText: (C) Zhang He Gang <zhanghegang@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */

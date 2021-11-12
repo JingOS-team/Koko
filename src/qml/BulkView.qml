@@ -1,9 +1,9 @@
-
-
 /*
- * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
+ * Copyright (C) 2021 Beijing Jingling Information System Technology Co., Ltd. All rights reserved.
  *
- * SPDX-License-Identifier: LGPL-2.1-or-later
+ * Authors:
+ * Zhang He Gang <zhanghegang@jingos.com>
+ *
  */
 import QtQuick 2.0
 import QtQuick.Controls 2.2 as Controls
@@ -16,8 +16,8 @@ Item {
 
     property var titleText
     property bool isEditShow: true
-    property int checkboxHeight: 22 //* appScaleSize//root.height * (CSJ.Left_View_Cancel_Height / CSJ.ScreenHeight)
-    property int skillHeight: 32 //* appScaleSize
+    property int checkboxHeight: 22 * appScaleSize
+    property int skillHeight: 32 * appScaleSize
     property var colorRow: "#00000000"
     property var editTextContent: "0"
     property ItemCheckBox allCheckBox: itemCheckBox
@@ -35,14 +35,14 @@ Item {
     Rectangle {
         id: checkboxshowRect
 
-        property int immwidth: 20
+        property int immwidth: 20 * appScaleSize
 
         anchors {
             left: parent.left
             right: parent.right
-            bottomMargin: 19
-            rightMargin: 19
-            leftMargin: 19
+            bottomMargin: 19 * appScaleSize
+            rightMargin: 19 * appScaleSize
+            leftMargin: 19 * appScaleSize
         }
         visible: isEditShow
         color: "transparent"
@@ -65,12 +65,33 @@ Item {
                 Layout.minimumHeight: skillHeight
                 Layout.minimumWidth: (checkboxshowRect.width - checkboxshowRect.immwidth) / 2
 
+                JIconButton{
+                    id: jicon
+                    anchors {
+                        left: itemCheckBox.left
+                        leftMargin: -5 * appScaleSize
+                        verticalCenter: parent.verticalCenter
+                    }
+                    width: checkboxHeight + 5 * appScaleSize
+                    height: checkboxHeight + 5 * appScaleSize
+                    visible: selectCount !== albumView.gridViewCount
+                    source: selectCount !== albumView.gridViewCount && selectCount > 0 ? "qrc:/assets/check_ok.png" : "qrc:/assets/check_default.png"
+                    MouseArea {
+                        width: itemCheckBox.width + 5 * appScaleSize
+                        height: itemCheckBox.height + 5 * appScaleSize
+                        anchors.centerIn: jicon
+                        onClicked: {
+                            allChecked(!itemCheckBox.checked)
+                        }
+                    }
+                }
+
                 ItemCheckBox {
                     id: itemCheckBox
+                    visible: !jicon.visible
 
                     anchors {
                         left: parent.left
-//                        bottom: parent.bottom
                         verticalCenter: parent.verticalCenter
                     }
                     radiusCB: width / 5
@@ -81,8 +102,8 @@ Item {
                     checked: selectCount === albumView.gridViewCount
 
                     MouseArea {
-                        width: itemCheckBox.width + 40
-                        height: itemCheckBox.height + 40
+                        width: itemCheckBox.width + 5
+                        height: itemCheckBox.height + 5
                         anchors.centerIn: itemCheckBox
                         onClicked: {
                             allChecked(!itemCheckBox.checked)
@@ -94,7 +115,6 @@ Item {
                     id: ltTextView
 
                     anchors {
-//                        bottom: itemCheckBox.bottom
                         verticalCenter: itemCheckBox.verticalCenter
                         left: itemCheckBox.right
                         leftMargin: 5 * appScaleSize
@@ -102,34 +122,16 @@ Item {
                     verticalAlignment: Text.AlignBottom
                     text: selectCount > albumView.gridViewCount
                           || selectCount < 0 ? 0 : selectCount
-                    color: "#000000"
-                    font.pixelSize: root.defaultFontSize
+                    color: JTheme.majorForeground//"#000000"
+                    font.pixelSize: root.defaultFontSize * appFontSize
                 }
             }
-
-//            Rectangle {
-//                color: colorRow
-//                Layout.fillWidth: true
-//                Layout.minimumHeight: checkboxHeight
-//                Layout.minimumWidth: (checkboxshowRect.width - checkboxshowRect.immwidth) / 3
-//                opacity: 0.5
-
-//                JIconButton {
-//                    id: foldersImage
-
-//                    anchors.verticalCenter: parent.verticalCenter
-//                    anchors.left: parent.left
-//                    width: height
-//                    height: checkboxHeight + 10
-//                    source: selectCount <= 0 ? "qrc:/assets/folders_default.png" : "qrc:/assets/edit_savetofile.png"
-//                }
-//            }
 
             Rectangle {
                 color: colorRow
                 Layout.fillWidth: true
                 Layout.minimumHeight: skillHeight
-                Layout.minimumWidth: (checkboxshowRect.width - checkboxshowRect.immwidth) / 2 - 19
+                Layout.minimumWidth: (checkboxshowRect.width - checkboxshowRect.immwidth) / 2 - 19 * appScaleSize
 
                 JIconButton {
                     id: deleteImage
@@ -139,7 +141,7 @@ Item {
                     width: height
                     height: skillHeight
                     source: selectCount
-                            <= 0 ? "qrc:/assets/delete_default.png" : "qrc:/assets/edit_delete.png"
+                            <= 0 ?  "qrc:/assets/delete_default.png": "qrc:/assets/edit_delete.svg"
                 }
 
                 MouseArea {
@@ -178,7 +180,7 @@ Item {
                     anchors.left: parent.left
                     width: height
                     height: skillHeight
-                    source: "qrc:/assets/cancel.png"
+                    source: "qrc:/assets/cancel.svg"
                 }
                 MouseArea {
                     anchors.fill: parent

@@ -25,10 +25,9 @@ void FileSystemMediaFetcher::slotProcess()
 {
     QMimeDatabase mimeDb;
 
-    QDirIterator it(m_folder, QDir::AllEntries | QDir::NoSymLinks | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+    QDirIterator it(m_folder, QDir::AllEntries | QDir::NoSymLinks | QDir::NoDotAndDotDot , QDirIterator::Subdirectories);
     while (it.hasNext()) {
         QString filePath = it.next();
-        //, QMimeDatabase::MatchExtension
         QString mimetype = mimeDb.mimeTypeForFile(filePath).name();
         if (mimetype.startsWith("image/"))
             Q_EMIT mediaResult(filePath, Types::MimeType::Image);

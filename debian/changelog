@@ -1,0 +1,11 @@
+koko (1.4) focal; urgency=medium
+
+  * Format version
+
+ -- JingOS CI <jingos@jingos.com>  Nov, 12 Fri 2021 16:05:56 +0800
+
+koko (0.0) UNRELEASED; urgency=medium
+
+  * Initial release.
+
+ -- Harald Sitter <sitter@kde.org>  Thu, 18 Dec 2014 11:04:27 +0100

@@ -85,14 +85,14 @@ ImageStorage *ImageStorage::instance()
 void ImageStorage::addImage(const ImageInfo &ii)
 {
     QMutexLocker lock(&m_mutex);
-
-    QSqlQuery query;
-    query.prepare("INSERT INTO FILES(url, dateTime) VALUES(?, ?)");
-    query.addBindValue(ii.path);
-    query.addBindValue(ii.dateTime.toString(Qt::ISODate));
-    if (!query.exec()) {
-        qDebug() << "FILE INSERT" << query.lastError();
-    }
+    
+        QSqlQuery query;
+        query.prepare("INSERT INTO FILES(url, dateTime) VALUES(?, ?)");
+        query.addBindValue(ii.path);
+        query.addBindValue(ii.dateTime.toString(Qt::ISODate));
+        if (!query.exec()) {
+            qDebug() << "FILE INSERT" << query.lastError();
+        }
 }
 
 void ImageStorage::removeImage(const QString &filePath)

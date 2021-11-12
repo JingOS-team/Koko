@@ -1,7 +1,7 @@
 /*
  * SPDX-FileCopyrightText: (C) 2014 Vishesh Handa <vhanda@kde.org>
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
- * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
+ * SPDX-FileCopyrightText: (C) Zhang He Gang <zhanghegang@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
@@ -36,6 +36,8 @@
 #include "resizehandle.h"
 #include "resizerectangle.h"
 #include "listimageprovider.h"
+#include <QSettings>
+#include<japplicationqt.h>
 
 #ifdef Q_OS_ANDROID
 #include <QtAndroid>
@@ -44,10 +46,12 @@
 int main(int argc, char **argv)
 {
     qint64 startTime = QDateTime::currentMSecsSinceEpoch();
+    QString appVersion = "1.0-dev";
     KLocalizedString::setApplicationDomain("Photos");
+
     KAboutData aboutData(QStringLiteral("Photos"),
                          xi18nc("@title", "<application>Photos</application>"),
-                         QStringLiteral("0.2-dev"),
+                         appVersion,
                          xi18nc("@title", "Photos is an image viewer for your image collection."),
                          KAboutLicense::LGPL,
                          xi18nc("@info:credit", "(c) 2013-2020 KDE Contributors"));
@@ -77,14 +81,27 @@ int main(int argc, char **argv)
 
     KAboutData::setApplicationData(aboutData);
 
+//    qputenv("QT_SCALE_FACTOR", "2");
+
     QApplication app(argc, argv);
+    JApplicationQt japp;
+    japp.enableBackgroud(true);
+    bool backgroundStartUp = qEnvironmentVariableIsSet("BACKGROUNDSTARTUP");
+    QApplication::setQuitLockEnabled(!backgroundStartUp);
+    QObject::connect(&japp, &JApplicationQt::resume, [&backgroundStartUp]() {
+        backgroundStartUp = false;
+    });
     app.setAttribute(Qt::AA_UseHighDpiPixmaps, true);
     app.setApplicationDisplayName("Photos");
     app.setOrganizationDomain("kde.org");
+
+    qint64 appTime = QDateTime::currentMSecsSinceEpoch();
+
     KDBusService* service = new KDBusService(KDBusService::Unique | KDBusService::Replace,&app);
 
     QCommandLineParser parser;
     parser.addOption(QCommandLineOption("reset", i18n("Reset the database")));
+    parser.addOption(QCommandLineOption("fromcamera", i18n("Open photo from camera")));
     parser.addPositionalArgument("image", i18n("path of image you want to open"));
     parser.addHelpOption();
     parser.addVersionOption();
@@ -99,8 +116,21 @@ int main(int argc, char **argv)
     QApplication::setApplicationVersion(aboutData.version());
     QApplication::setWindowIcon(QIcon::fromTheme(QStringLiteral("jinggallery")));
 
+    QSettings settings;
+    QString appVersionKey = "appVersion";
+    QString cacheAppVersion = settings.value(appVersionKey,"").toString();
+    if(cacheAppVersion != appVersion){
+        QDir qmlCachePath(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/qmlcache");
+
+        if(qmlCachePath.exists()){
+            bool isSuc = qmlCachePath.removeRecursively();
+        }
+    }
+    settings.setValue(appVersionKey,appVersion);
+
     QString checkPaths;
     QString CommandLinePath;
+    bool fromCameraCommandLine = false;
 
 
     if (parser.positionalArguments().size() > 1) {
@@ -111,7 +141,17 @@ int main(int argc, char **argv)
 
         QFileInfo comLineFile(comlinePath.path());
         checkPaths = comLineFile.path();
-        MediaStorage::DATA_TABLE_NAME = "commandline_files";
+        QStringList locations = QStandardPaths::standardLocations(QStandardPaths::PicturesLocation);
+        QString homePicPath = locations.first();
+
+        if(checkPaths.startsWith(homePicPath)){
+            MediaStorage::DATA_TABLE_NAME = "files";
+            QStringList locations = QStandardPaths::standardLocations(QStandardPaths::HomeLocation);
+            Q_ASSERT(locations.size() >= 1);
+            checkPaths = locations.first();
+        } else {
+            MediaStorage::DATA_TABLE_NAME = "commandline_files";
+        }
         CommandLinePath = comlinePath.path();
     } else {
         MediaStorage::DATA_TABLE_NAME = "files";
@@ -120,10 +160,14 @@ int main(int argc, char **argv)
         checkPaths = locations.first();
     }
 
+    if (parser.isSet("fromcamera")) {
+        fromCameraCommandLine = true;
+    }
+
     if (parser.isSet("reset")) {
         MediaStorage::reset();
     }
-
+    qint64 readTime = QDateTime::currentMSecsSinceEpoch();
     QThread trackerThread;
 #ifdef Q_OS_ANDROID
     QtAndroid::requestPermissionsSync({"android.permission.WRITE_EXTERNAL_STORAGE"});
@@ -139,15 +183,18 @@ int main(int argc, char **argv)
     QObject::connect(&tracker, &FileSystemTracker::mediaRemoved, &processor, &JingGallery::Processor::removeFile);
     QObject::connect(&tracker, &FileSystemTracker::initialScanComplete, &processor, &JingGallery::Processor::initialScanCompleted);
 
-    QObject::connect(&trackerThread, &QThread::started, &tracker, &FileSystemTracker::setupDb);
+    // QObject::connect(&trackerThread, &QThread::started, &tracker, &FileSystemTracker::setupDb);
 
     trackerThread.start();
-    tracker.setSubFolder(tracker.folder());
+    tracker.updateCache();
 
     JingGalleryConfig config;
     QObject::connect(&config, &JingGalleryConfig::IconSizeChanged, &config, &JingGalleryConfig::save);
 
+    qint64 beanTime = QDateTime::currentMSecsSinceEpoch();
     QQmlApplicationEngine engine;
+    qint64 engineTime = QDateTime::currentMSecsSinceEpoch();
+    qDebug()<<Q_FUNC_INFO << " loadtime::main engineTime time:" << (engineTime - beanTime);
     engine.rootContext()->setContextObject(new KLocalizedContext(&engine));
 
     engine.rootContext()->setContextProperty("jingGalleryProcessor", &processor);
@@ -156,21 +203,25 @@ int main(int argc, char **argv)
 
     engine.rootContext()->setContextProperty("CommandLineInto", CommandLinePath);
     engine.rootContext()->setContextProperty("MainStartTime",startTime);
+    engine.rootContext()->setContextProperty("FromCameraCommandLine", fromCameraCommandLine);
+    engine.rootContext()->setContextProperty("japp", &japp);
+    engine.rootContext()->setContextProperty("realVisible", !backgroundStartUp);
+    QObject::connect(&japp, &JApplicationQt::resume, [&engine]() {
+        engine.rootContext()->setContextProperty("realVisible", true);
+    });
+
 
     qmlRegisterType<ResizeHandle>("org.kde.jinggallery.private", 1, 0, "ResizeHandle");
     qmlRegisterType<ResizeRectangle>("org.kde.jinggallery.private", 1, 0, "ResizeRectangle");
 
     ListImageProvider *lp = new ListImageProvider(QQmlImageProviderBase::Pixmap);
     engine.addImageProvider(QLatin1String("imageProvider"), lp);
-
+    qint64 loadUrlBeforeTime = QDateTime::currentMSecsSinceEpoch();
+    qDebug()<<Q_FUNC_INFO << " loadtime::main loadUrlBeforeTime time:" << (loadUrlBeforeTime - readTime);
     QString path;
     // we want different main files on desktop or mobile
     // very small difference as they as they are subclasses of the same thing
-    if (qEnvironmentVariableIsSet("QT_QUICK_CONTROLS_MOBILE") && (QString::fromLatin1(qgetenv("QT_QUICK_CONTROLS_MOBILE")) == QStringLiteral("1") || QString::fromLatin1(qgetenv("QT_QUICK_CONTROLS_MOBILE")) == QStringLiteral("true"))) {
-        engine.load(QUrl(QStringLiteral("qrc:/qml/mobileMain.qml")));
-    } else {
-        engine.load(QUrl(QStringLiteral("qrc:/qml/desktopMain.qml")));
-    }
+    engine.load(QUrl(QStringLiteral("qrc:/qml/desktopMain.qml")));
     qint64 endTime = QDateTime::currentMSecsSinceEpoch();
     int rt = app.exec();
     trackerThread.quit();

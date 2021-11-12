@@ -1,7 +1,7 @@
-# Jing-Photos <img src="logo.png" width="40"/>
+# Photos <img src="logo.png" width="40"/>
 # Origin from Koko
 
-Jing-Photos is based on Koko [github](https://github.com/JingOS-team/jing-photos/blob/master/TODO) , a beautifully designed photos that conforms to the JingOS style and has a compatible `pad / desktop` experience.
+The application of photos is based on Koko [github](https://github.com/JingOS-team/jing-photos/blob/master/TODO) , a beautifully designed photos that conforms to the JingOS style and has a compatible `pad / desktop` experience.
 
 ## Contributing
 
@@ -39,8 +39,8 @@ take care of the rest.
 ## Links
 
 - Home: [www.jingos.com](http://www.jingos.com/)
-- Project page: https://github.com/JingOS-team/photo
-- File issues: https://github.com/JingOS-team/photo/issues
+- Project page: github.com/jingOS-team/koko
+- File issues: github.com/jingOS-team/koko/issues
 - Development channel: [www.jingos.com](http://www.jingos.com/)
 
 ## Installing

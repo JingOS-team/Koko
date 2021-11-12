@@ -1,14 +1,13 @@
 /*
  * SPDX-FileCopyrightText: (C) 2014 Vishesh Handa <vhanda@kde.org>
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
- *                             2021 Wang Rui <wangrui@jingos.com>
+ *                             Zhang He Gang <zhanghegang@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "filesystemtracker.h"
 #include "filesystemmediafetcher.h"
-#include "mediastorage.h"
 
 #include <QSqlDatabase>
 #include <QSqlError>
@@ -20,18 +19,22 @@
 #include <QStandardPaths>
 #include <KDirNotify>
 #include <kdirwatch.h>
+#include <QUrl>
 
 FileSystemTracker::FileSystemTracker(QObject *parent)
     : QObject(parent)
 {
-    QObject::connect(KDirWatch::self(), &KDirWatch::dirty, this, &FileSystemTracker::setSubFolder);
+    QObject::connect(KDirWatch::self(), &KDirWatch::dirty, this, &FileSystemTracker::fileContentChanaged);
 
     org::kde::KDirNotify *kdirnotify = new org::kde::KDirNotify(QString(), QString(), QDBusConnection::sessionBus(), this);
 
     connect(kdirnotify, &org::kde::KDirNotify::FilesRemoved, this, [this](const QStringList &files) {
+        QList<QString> tmpList;
         for (const QString &filePath : files) {
-            removeFile(filePath);
+            QString deCodingPath = QUrl::fromPercentEncoding(filePath.toLocal8Bit());
+            tmpList.append(deCodingPath);
         }
+        removeFile(tmpList);
     });
     connect(kdirnotify, &org::kde::KDirNotify::FilesAdded, this, &FileSystemTracker::setSubFolder);
     connect(kdirnotify, &org::kde::KDirNotify::FileRenamedWithLocalPath, this, [this](const QString &src, const QString &dst, const QString &) {
@@ -46,6 +49,18 @@ FileSystemTracker::FileSystemTracker(QObject *parent)
     con.connect(QString(), QLatin1String("/files"), QLatin1String("org.kde"), QLatin1String("changed"), this, SLOT(slotNewFiles(QStringList)));
 
     connect(this, &FileSystemTracker::subFolderChanged, this, &FileSystemTracker::reindexSubFolder);
+
+    m_videoChangedTimer = new QTimer(this);
+    m_videoChangedTimer->setSingleShot(true);
+    connect(m_videoChangedTimer, &QTimer::timeout, this, &FileSystemTracker::delayUpdateDb);
+
+    connect(MediaStorage::instance(), &MediaStorage::getAllMediasFinish, this, [this](QHash<QString,MediaInfo> allMedias){
+        m_allMedias = allMedias;
+        if (m_initRequest) {
+           setSubFolder(folder());
+           m_initRequest = false;
+        }
+    },Qt::ConnectionType::QueuedConnection);
 }
 
 void FileSystemTracker::setupDb()
@@ -113,24 +128,9 @@ FileSystemTracker::~FileSystemTracker()
 
 void FileSystemTracker::slotMediaResult(const QString &filePath, Types::MimeType fileType)
 {
+    bool isExistData = m_allMedias.contains(filePath);
 
-    QSqlQuery query(QSqlDatabase::database("fstracker"));
-    query.prepare("SELECT id from " + MediaStorage::DATA_TABLE_NAME + " where url = ?");
-    query.addBindValue(filePath);
-    if (!query.exec()) {
-        qWarning() << query.lastError();
-        return;
-    }
-
-    if (!query.next()) {
-        QSqlQuery query(QSqlDatabase::database("fstracker"));
-        query.prepare("INSERT into " + MediaStorage::DATA_TABLE_NAME + "(url, type) VALUES (?,?)");
-        query.addBindValue(filePath);
-        query.addBindValue(fileType);
-        if (!query.exec()) {
-            qWarning() << query.lastError();
-            return;
-        }
+    if (!isExistData) {
         emit mediaAdded(filePath, fileType);
     }
     m_filePaths << filePath;
@@ -138,22 +138,21 @@ void FileSystemTracker::slotMediaResult(const QString &filePath, Types::MimeType
 
 void FileSystemTracker::slotFetchFinished()
 {
-    QSqlQuery query(QSqlDatabase::database("fstracker"));
-    query.prepare("SELECT url from "+MediaStorage::DATA_TABLE_NAME+"");
-    if (!query.exec()) {
-        qWarning() << query.lastError();
-        return;
-    }
+    QList<QString> filePaths;
 
-    while (query.next()) {
-        QString filePath = query.value(0).toString();
-
+    QList<QString> sqlList = m_allMedias.keys();
+    foreach (QString filePath , sqlList) {
         if (filePath.contains(m_subFolder) && !m_filePaths.contains(filePath)) {
-            removeFile(filePath);
+            if (filePath.startsWith("file://")) {
+                filePath = filePath.mid(7);
+            }
+            if(filePath.startsWith(m_folder)){
+                filePaths.append(filePath);
+            }
         }
     }
+    removeFile(filePaths);
 
-    QSqlDatabase::database("fstracker").commit();
     m_filePaths.clear();
     emit initialScanComplete();
 }
@@ -164,17 +163,30 @@ void FileSystemTracker::removeFile(const QString &filePath)
 
     if (filePath.startsWith("file://"))
         realPath = filePath.mid(7);
-    if (!realPath.startsWith(m_folder)) {
+
+    if(!realPath.startsWith(m_folder)){
         return;
     }
+    m_allMedias.remove(realPath);
+    QList<QString> filePaths = {realPath};
+    emit mediaRemoved(filePaths);
+}
 
-    emit mediaRemoved(realPath);
+void FileSystemTracker::removeFile(const QList<QString> &filePaths)
+{
+    QList<QString> tmpList;
+    foreach (QString filePath,filePaths) {
+        if (filePath.startsWith("file://"))
+            filePath = filePath.mid(7);
 
-    QSqlQuery query(QSqlDatabase::database("fstracker"));
-    query.prepare("DELETE from "+MediaStorage::DATA_TABLE_NAME+" where url = ?");
-    query.addBindValue(realPath);
-    if (!query.exec()) {
-        qWarning() << query.lastError();
+        if(!filePath.startsWith(m_folder)){
+            continue;
+        }
+        m_allMedias.remove(filePath);
+        tmpList.append(filePath);
+    }
+    if (tmpList.size() > 0) {
+        emit mediaRemoved(tmpList);
     }
 }
 
@@ -187,7 +199,10 @@ void FileSystemTracker::slotNewFiles(const QStringList &files)
 
     QMimeDatabase db;
     for (const QString &file : files) {
-        if (!file.startsWith(m_folder)) {
+        if(!file.startsWith(m_folder)){
+            continue;
+        }
+        if(file.startsWith(m_folder + "/.config")){
             continue;
         }
         QMimeType mimetype = db.mimeTypeForFile(file);
@@ -222,6 +237,57 @@ void FileSystemTracker::setSubFolder(const QString &folder)
     if (QFileInfo(folder).isDir()) {
         m_subFolder = folder;
         emit subFolderChanged();
+    }
+}
+
+void FileSystemTracker::updateCache()
+{
+    emit MediaStorage::instance()->requestAllMedias();
+}
+
+void FileSystemTracker::delayUpdateDb()
+{
+    QString cacheDir = MediaStorage::instance() -> m_thumbFilePath;
+    foreach(QString itemPath, m_neetUpdateVideoPaths){
+        QDir dir(cacheDir + itemPath);
+        if (!dir.exists("preview.jpg"))
+        {
+            QFile(dir.absolutePath()+ "/preview.jpg").remove();
+        }
+    }
+
+    foreach(QString itemPath, m_currentVideoPaths){
+        emit mediaAdded(itemPath,Types::MimeType::Video);
+    }
+    m_neetUpdateVideoPaths.clear();
+    m_currentVideoPaths.clear();
+}
+
+void FileSystemTracker::fileContentChanaged(const QString &filePath)
+{
+    QFileInfo fcPath = QFileInfo(filePath);
+    if (fcPath.isDir()) {
+        m_subFolder = filePath;
+        emit subFolderChanged();
+    } else {
+        if(fcPath.isHidden()){
+            return;
+        }
+        QMimeDatabase db;
+        QMimeType mimetype = db.mimeTypeForFile(filePath);
+        if (mimetype.name().startsWith("video/")) {
+
+            bool isContains = m_currentVideoPaths.contains(filePath);
+            if(isContains){
+                m_neetUpdateVideoPaths << filePath;
+            }
+            m_currentVideoPaths << filePath;
+            if(!m_videoChangedTimer->isActive()){
+                m_videoChangedTimer->start(1000);
+            }
+        } else if (mimetype.name().startsWith("image/")) {
+            slotMediaResult(filePath, Types::MimeType::Image);
+        }
     }
 }
 

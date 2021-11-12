@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [ -d /usr/lib/ccache ]; then
+    export PATH="/usr/lib/ccache:$PATH"
+fi
+debian/rules clean 2>&1
+dpkg-source --before-build .
+debian/rules build 2>&1
+debian/tests/testsuite.xsession

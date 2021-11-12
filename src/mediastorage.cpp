@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2017 Atul Sharma <atulsharma406@gmail.com>
  * Copyright (C) 2014  Vishesh Handa <vhanda@kde.org>
- *               2021 Wang Rui <wangrui@jingos.com>
+ *               Zhang He Gang <zhanghegang@jingos.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,7 +23,6 @@
 #include <QDebug>
 #include <QProcess>
 #include <QDir>
-#include <QStandardPaths>
 #include <QUrl>
 #include <QSize>
 #include <QPixmap>
@@ -46,6 +45,27 @@ QString MediaStorage::DATA_TABLE_NAME = "files";
 MediaStorage::MediaStorage(QObject *parent)
     : QObject(parent)
 {
+    qWarning() << "init media storage";
+    if(!m_videoChangedTimer){
+        m_videoChangedTimer = new QTimer(this);
+        m_videoChangedTimer->setSingleShot(true);
+        connect(m_videoChangedTimer, &QTimer::timeout, this, [this](){
+            if(loadVideoSize <= 0){
+                emitModelRefresh();
+            }
+        });
+    }
+
+    if(!m_refreshChangedTimer){
+        m_refreshChangedTimer = new QTimer(this);
+        m_refreshChangedTimer->setSingleShot(true);
+        connect(m_refreshChangedTimer, &QTimer::timeout, this, [this](){
+            emit storageModified();
+            getAllMedias();
+        });
+    }
+    connect(this, &MediaStorage::requestAllMedias, this, &MediaStorage::getAllMedias,Qt::ConnectionType::QueuedConnection);
+
     m_imageCache = new KImageCache(QStringLiteral("org.kde.jingallery"), 256*1024*1024);
 
     QString dir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/jinggallery";
@@ -86,6 +106,7 @@ MediaStorage::MediaStorage(QObject *parent)
         "                    )");
 
     db.transaction();
+
 }
 
 MediaStorage::~MediaStorage()
@@ -115,27 +136,67 @@ void MediaStorage::addMedia(const MediaInfo &ii)
     query.addBindValue(ii.mimeType);
     query.addBindValue(ii.duration);
     query.addBindValue(ii.dateTime.toString(Qt::ISODate));
-
     if (!query.exec()) {
-        qWarning() << "FILE INSERT" << query.lastError();
+        // qDebug() << "FILE INSERT" << query.lastError();
+        if (ii.mimeType == 1) {
+            QSqlQuery updateQuery;
+            updateQuery.prepare("UPDATE "+DATA_TABLE_NAME+" SET url=?, type=?, duration=?, dateTime=? WHERE url = ?");
+            updateQuery.addBindValue(ii.path);
+            updateQuery.addBindValue(ii.mimeType);
+            updateQuery.addBindValue(ii.duration);
+            updateQuery.addBindValue(ii.dateTime.toString(Qt::ISODate));
+            updateQuery.addBindValue(ii.path);
+            if (!updateQuery.exec()) {
+                qWarning() << "FILE UPDATE" << query.lastError();
+            }
+        }
     }
 
     if (ii.mimeType == Types::MimeType::Video) {
-        QDir dir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + ii.path);
+        QDir dir(m_thumbFilePath + ii.path);
         if (!dir.exists("preview.jpg"))
         {
             dir.mkpath(dir.absolutePath());
             QStringList plugins;
             plugins << KIO::PreviewJob::availablePlugins();
             KFileItemList list;
-            list.append(KFileItem(QUrl("file://"+ii.path),  QString(), 0));
+            KFileItem item = KFileItem(QUrl("file://"+ii.path),  QString(), ii.rotation);
+            list.append(item);
 
             KIO::PreviewJob *job = KIO::filePreview(list, QSize(ii.width, ii.height), &plugins);
             job->setIgnoreMaximumSize(true);
             job->setScaleType(KIO::PreviewJob::ScaleType::Unscaled);
             connect(job, &KIO::PreviewJob::gotPreview, this, &MediaStorage::gotPreviewed);
+            loadVideoSize ++;
         }
     }
+}
+
+void MediaStorage::updateMedia(const MediaInfo &ii)
+{
+    QMutexLocker lock(&m_mutex);
+    QSqlQuery query;
+    query.prepare("UPDATE "+DATA_TABLE_NAME+" SET url=?, type=?, duration=?, dateTime=? WHERE url = ?");
+    query.addBindValue(ii.path);
+    query.addBindValue(ii.mimeType);
+    query.addBindValue(ii.duration);
+    query.addBindValue(ii.dateTime.toString(Qt::ISODate));
+    query.addBindValue(ii.path);
+
+    if (!query.exec()) {
+        qWarning() << "FILE UPDATE" << query.lastError();
+    }
+}
+
+int MediaStorage::getVideoAngle(const QString &filePath)
+{
+    int angleValue = 0;
+    MediaInfoLib::MediaInfo MI;
+    if (MI.Open(filePath.toStdWString())) {
+        QString rotationStr = QString::fromStdWString(MI.Get(MediaInfoLib::Stream_Video, 0, __T("Rotation")));
+        angleValue = rotationStr.toDouble();
+    }
+    return angleValue;
 }
 void MediaStorage::process() {
     MediaInfo ii;
@@ -184,38 +245,80 @@ void MediaStorage::addImage(const QString &filePath)
 
 void MediaStorage::gotPreviewed(const KFileItem &item, const QPixmap &preview)
 {
-    QDir dir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + item.localPath());
+    QString itemMime = item.url().toString();
+
+    QDir dir(m_thumbFilePath + item.localPath());
     dir.mkpath(dir.absolutePath());
-    preview.save(dir.absolutePath()+ "/preview.jpg", "JPG");
+    if(item.mode() > 0){
+        QTransform tranform;
+        tranform.rotate(item.mode());
+        QPixmap transPix = QPixmap(preview.transformed(tranform,Qt::SmoothTransformation));
+        transPix.save(dir.absolutePath()+ "/preview.jpg", "JPG");
+
+    } else {
+        preview.save(dir.absolutePath()+ "/preview.jpg", "JPG");
+    }
+    loadVideoSize --;
+    if(!m_videoChangedTimer){
+        m_videoChangedTimer = new QTimer(this);
+    }
+    if(m_videoChangedTimer->isActive()){
+        m_videoChangedTimer->stop();
+    }
+    m_videoChangedTimer->start(1000);
 }
 
-void MediaStorage::removeMedia(const QString &filePath)
+void MediaStorage::removeMedia(const QList<QString> &filePaths)
 {
+    if (filePaths.size() <= 0) {
+        return;
+    }
     QMutexLocker lock(&m_mutex);
 
     QSqlQuery query;
-    query.prepare("DELETE FROM "+DATA_TABLE_NAME+" WHERE URL = ?");
-    query.addBindValue(filePath);
+    QString sqlString = "DELETE FROM "+DATA_TABLE_NAME+" WHERE";
+    for (int i = 0; i< filePaths.size() ; i++) {
+        if (i == 0) {
+           sqlString.append(" URL = ?");
+        } else {
+           sqlString.append(" OR URL = ?");
+        }
+    }
+    query.prepare(sqlString);
+    foreach (QString filePath, filePaths) {
+        query.addBindValue(filePath);
+    }
+
     if (!query.exec()) {
         qWarning() << "FILE del" << query.lastError();
     }
 
-    QSqlQuery query2;
-    query2.prepare("DELETE FROM LOCATIONS WHERE id NOT IN (SELECT DISTINCT location FROM "+DATA_TABLE_NAME+" WHERE location IS NOT NULL)");
-    if (!query2.exec()) {
-        qWarning() << "Loc del" << query2.lastError();
-    }
+    foreach (QString filePath, filePaths) {
+        QMimeDatabase mimeDb;
+        QString mimetype = mimeDb.mimeTypeForFile(filePath, QMimeDatabase::MatchExtension).name();
 
-    QMimeDatabase mimeDb;
-    QString mimetype = mimeDb.mimeTypeForFile(filePath, QMimeDatabase::MatchExtension).name();
-
-    if (mimetype.startsWith("video/"))
-    {
-        QDir dir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + filePath + "/cache.jpg");
-        if (dir.exists()) {
-            dir.removeRecursively();
+        if (mimetype.startsWith("video/"))
+        {
+            QDir dir(m_thumbFilePath + filePath + "/preview.jpg");
+            if (dir.exists()) {
+                dir.removeRecursively();
+            }
         }
     }
+
+}
+
+void MediaStorage::removeAllMedia()
+{
+    qWarning() << Q_FUNC_INFO;
+
+    QSqlQuery query;
+    query.prepare("DELETE FROM "+DATA_TABLE_NAME);
+    if (!query.exec()) {
+        qWarning() << "FILE del" << query.lastError();
+        return;
+    }
+    emitModelRefresh();
 }
 
 void MediaStorage::commit()
@@ -226,8 +329,25 @@ void MediaStorage::commit()
         db.commit();
         db.transaction();
     }
+   emitModelRefresh();
+}
 
-    emit storageModified();
+void MediaStorage::emitModelRefresh()
+{
+    if(!m_refreshChangedTimer){
+        m_refreshChangedTimer = new QTimer(this);
+        m_refreshChangedTimer->setSingleShot(true);
+        connect(m_refreshChangedTimer, &QTimer::timeout, this, [this](){
+            emit storageModified();
+            getAllMedias();
+        });
+    }
+
+    if(!m_refreshChangedTimer->isActive()){
+
+        m_refreshChangedTimer->start(3000);
+    }
+   
 }
 
 QList<QPair<QByteArray, QString>> MediaStorage::locations(Types::LocationGroup loca)
@@ -593,7 +713,7 @@ QString MediaStorage::mediaForTime(const QByteArray &name, Types::TimeGroup grou
     }
 
     if (!query.exec()) {
-        qDebug() << group << query.lastError();
+        qWarning() << group << query.lastError();
         return QString();
     }
 
@@ -639,6 +759,29 @@ void MediaStorage::reset()
     QDir(dir).removeRecursively();
 }
 
+bool MediaStorage::isExistData(const QString &filePath)
+{
+    QMutexLocker lock(&m_mutex);
+
+    bool isOldData = false;
+
+    QSqlQuery query(QSqlDatabase::database());
+    query.prepare("SELECT duration from "+DATA_TABLE_NAME+" where url = ?");
+    query.addBindValue(filePath);
+    if (query.exec()) {
+        int duration = query.value(0).toInt();
+        if(duration == 0){
+            isOldData = false;
+        } else {
+            isOldData = true;
+        }
+    } else {
+        qWarning() <<"video Query error:" << query.lastError();
+        isOldData = true;
+    }
+    return isOldData;
+}
+
 QList<MediaInfo> MediaStorage::allMedias(int size, int offset)
 {
     QMutexLocker lock(&m_mutex);
@@ -667,4 +810,27 @@ QList<MediaInfo> MediaStorage::allMedias(int size, int offset)
     }
 
     return files;
+}
+
+void MediaStorage::getAllMedias()
+{
+    QMutexLocker lock(&m_mutex);
+
+    QSqlQuery query;
+    query.prepare("SELECT DISTINCT url,type,duration from "+DATA_TABLE_NAME+" ORDER BY dateTime DESC");
+
+    QHash<QString,MediaInfo> files;
+    if (!query.exec()) {
+        qWarning() << query.lastError();
+        return ;
+    }
+
+    while (query.next()) {
+        MediaInfo info;
+        info.path = QString(query.value(0).toString());
+        info.mimeType = static_cast<Types::MimeType>(query.value(1).toInt());
+        info.duration = query.value(2).toInt();
+        files.insert(info.path,info);
+    }
+    emit getAllMediasFinish(files);
 }

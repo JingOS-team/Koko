@@ -1,6 +1,6 @@
 /*
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
- *                             2021 Wang Rui <wangrui@jingos.com>
+ *                             Zhang He Gang <zhanghegang@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.0-or-later
  */
@@ -67,7 +67,7 @@ QVariant MediaListModel::data(const QModelIndex &index, int role) const
         {
             return m_medias.at(indexValue).path;
         } else {
-            QDir dir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + (m_medias.at(indexValue).path.mid(7)));
+            QDir dir(m_thumbFilePath + (m_medias.at(indexValue).path.mid(7)));
             if (dir.exists("preview.jpg")) {
                 return QString("file://" + dir.absoluteFilePath("preview.jpg"));
             }

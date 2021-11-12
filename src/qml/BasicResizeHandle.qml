@@ -1,6 +1,6 @@
 /*
  *  Copyright 2019 Marco Martin <mart@kde.org>
- *            2021 Wang Rui <wangrui@jingos.com>
+ *            Zhang He Gang <zhanghegang@jingos.com>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -45,14 +45,7 @@ KokoComponent.ResizeHandle {
         anchors.top: getWidthHeight(true) ? parent.bottom : parent.top
         width:parent.width
         height:rhHeight
-
-//        Kirigami.Theme.colorSet: Kirigami.Theme.View
         color: "white"//Kirigami.Theme.backgroundColor
-//        shadow {
-//            size: 4
-//            color: "transparent"
-//        }
-
     }
 
     Kirigami.ShadowedRectangle {
@@ -64,11 +57,6 @@ KokoComponent.ResizeHandle {
         width:rhHeight
         height:parent.width
         
-//        Kirigami.Theme.colorSet: Kirigami.Theme.View
         color: "white"
-//        shadow {
-//            size: 4
-//            color: "transparent"
-//        }
     }
 }

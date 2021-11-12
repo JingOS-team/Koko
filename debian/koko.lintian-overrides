@@ -1,0 +1,4 @@
+koko: package-name-doesnt-match-sonames libkokocommon
+koko: shlib-without-versioned-soname usr/lib/*/libkokocommon.so libkokocommon.so
+koko: postinst-must-call-ldconfig usr/lib/*/libkokocommon.so
+koko: package-must-activate-ldconfig-trigger usr/lib/*/libkokocommon.so

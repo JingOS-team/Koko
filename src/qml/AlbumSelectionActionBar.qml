@@ -1,7 +1,9 @@
 /*
- * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
+ * Copyright (C) 2021 Beijing Jingling Information System Technology Co., Ltd. All rights reserved.
  *
- * SPDX-License-Identifier: LGPL-2.1-or-later
+ * Authors:
+ * Zhang He Gang <zhanghegang@jingos.com>
+ *
  */
 
 import QtQuick 2.15
@@ -32,24 +34,5 @@ Rectangle {
             bottomMargin: height * 0.05
         }
         spacing:height * 0.2
-
-        // RoundButton {
-        //     id: idDelect
-
-        //     anchors.verticalCenter: parent.verticalCenter
-        //     width: parent.width
-        //     height: parent.height * 0.9
-        //     radius: height / 2
-        //     text: i18n("Del")
-        //     enabled: model.hasSelectedImages
-            
-        //     onClicked: {
-        //         model.deleteSelection()
-        //         page.state = "browsing"
-        //     }
-        //     background: Rectangle {
-        //         radius: parent.radius
-        //     }
-        // }
     }
 }

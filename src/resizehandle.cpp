@@ -1,7 +1,7 @@
 /*
  *   Copyright 2019 by Marco Martin <mart@kde.org>
  *   Copyright 2020 by Carl Schwan <carl@carlschwan.eu>
- *   Copyright 2021 Wang Rui <wangrui@jingos.com>
+ *   Copyright Zhang He Gang <zhanghegang@jingos.com>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -129,7 +129,7 @@ void ResizeHandle::mouseMoveEvent(QMouseEvent *event)
         const qreal width = qMax(minimumSize.width(), m_mouseDownGeometry.width() + difference.x());
         const qreal x = m_mouseDownGeometry.x() + (m_mouseDownGeometry.width() - width);
 
-        if (x >= m_moveArea.x() && width > 150) {
+        if(x >= m_moveArea.x() && width > 150){
             m_rectangle->setX(x);
             m_rectangle->setWidth(width);
             setResizeBlocked(m_mouseDownGeometry.width() + difference.x() < minimumSize.width(), m_resizeHeightBlocked);
@@ -137,7 +137,7 @@ void ResizeHandle::mouseMoveEvent(QMouseEvent *event)
     } else if (resizeRight()) {
         const qreal width = qMax(minimumSize.width(), m_mouseDownGeometry.width() - difference.x());
 
-        if ((m_moveArea.x() + m_moveArea.width()) > (m_rectangle->x() +width) && width > 150) {
+        if((m_moveArea.x() + m_moveArea.width()) > (m_rectangle->x() +width) && width > 150){
             m_rectangle->setWidth(width);
             setResizeBlocked(m_mouseDownGeometry.width() - difference.x() < minimumSize.width(), m_resizeHeightBlocked);
         }
@@ -147,7 +147,7 @@ void ResizeHandle::mouseMoveEvent(QMouseEvent *event)
     if (resizeTop()) {
         const qreal height = qMax(minimumSize.height(), m_mouseDownGeometry.height() + difference.y());
         const qreal y = m_mouseDownGeometry.y() + (m_mouseDownGeometry.height() - height);
-        if (y >= m_moveArea.y() && height > 150) {
+        if(y >= m_moveArea.y() && height > 150){
             m_rectangle->setY(y);
             m_rectangle->setHeight(height);
             setResizeBlocked(m_resizeWidthBlocked,
@@ -155,7 +155,7 @@ void ResizeHandle::mouseMoveEvent(QMouseEvent *event)
         }
     } else if (resizeBottom()) {
         const qreal height = qMax(minimumSize.height(), m_mouseDownGeometry.height() - difference.y());
-        if ((m_moveArea.y() + m_moveArea.height()) > (m_rectangle->y() +height)  && height > 150) {
+        if((m_moveArea.y() + m_moveArea.height()) > (m_rectangle->y() +height)  && height > 150){
             m_rectangle->setHeight(qMax(height, minimumSize.height()));
             setResizeBlocked(m_resizeWidthBlocked,
                              m_mouseDownGeometry.height() - difference.y() < minimumSize.height());

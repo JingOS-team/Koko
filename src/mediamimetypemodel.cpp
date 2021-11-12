@@ -1,7 +1,7 @@
 /*
  * SPDX-FileCopyrightText: (C) 2014 Vishesh Handa <vhanda@kde.org>
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
- * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
+ * SPDX-FileCopyrightText: (C) Zhang He Gang <zhanghegang@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
@@ -17,6 +17,7 @@
 #include <QStandardPaths>
 #include <QFile>
 #include <KLocalizedString>
+#include <QUrl>
 
 #define WEEKDAY_SEC  24 * 3600 * 7
 #define DAY_SEC  24 * 3600
@@ -24,17 +25,19 @@
 MediaMimeTypeModel::MediaMimeTypeModel(QObject *parent)
     : QAbstractListModel(parent)
     , m_mimetype(Types::MimeType::All)
+    , m_screenshotSize(256,256)
 {
     m_localeConfig = KSharedConfig::openConfig(QStringLiteral("kdeglobals"), KConfig::FullConfig);
     m_localeConfigWatcher = KConfigWatcher::create(m_localeConfig);
 
     // watch for changes to locale config, to update 12/24 hour time
     bool dirWatcherConnect = connect(m_localeConfigWatcher.data(), &KConfigWatcher::configChanged,
-    this, [this](const KConfigGroup &group, const QByteArrayList &names) {
+            this, [this](const KConfigGroup &group, const QByteArrayList &names){
         if (group.name() == "Locale") {
             slotPopulate();
         }
     });
+
     connect(MediaStorage::instance(), SIGNAL(storageModified()), this, SLOT(slotPopulate()));
     connect(this, &QAbstractItemModel::rowsInserted, this, &MediaMimeTypeModel::countChanged);
     connect(this, &QAbstractItemModel::rowsRemoved, this, &MediaMimeTypeModel::onRemoveData);
@@ -69,15 +72,35 @@ int MediaMimeTypeModel::findIndex(QString path)
     return -1;
 }
 
-void MediaMimeTypeModel::deleteItemByIndex(int index)
+void MediaMimeTypeModel::deleteItemByIndex(int index, int pIndex)
 {
     MediaInfo mi = m_medias.at(index);
-    if (mi.path.startsWith("file://"))
-        mi.path = mi.path.mid(7);
+
     isDeleteOne = true;
-    QFile::moveToTrash(mi.path);
-    m_medias.removeAt(index);
-    emit countChanged();
+    bool dResult = false;
+    if (mi.path.contains("%")) {
+        if (mi.path.startsWith("file://"))
+            mi.path = mi.path.mid(7);
+        dResult = QFile::moveToTrash(mi.path);
+    } else {
+        auto fileTrashJob = KIO::trash(QUrl::fromUserInput(mi.path), KIO::HideProgressInfo);
+        QObject::connect(fileTrashJob, &KJob::result, [=] (KJob *job) {
+                if (job->error()) {
+                    QString errorContent = job->errorString();
+                    qDebug() << "deleteItemByIndex TRAASH ERROR : " << errorContent;
+                    emit errorInfoTip(errorContent);
+                }
+         });
+        dResult = fileTrashJob->exec();
+    }
+    if(dResult){
+        beginRemoveRows({},pIndex,pIndex);
+        m_medias.removeAt(index);
+        endRemoveRows();
+        emit countChanged();
+    } else {
+        setDeleteFilesStatus(false);
+    }
 }
 
 bool MediaMimeTypeModel::is24HourFormat() const
@@ -138,18 +161,25 @@ QVariant MediaMimeTypeModel::data(const QModelIndex &index, int role) const
     }
 
     case Roles::PreviewUrlRole: {
+        const_cast<MediaMimeTypeModel *>(this) -> dataRequestCount ++ ;
+        QVariant previewVariant;
         if (m_medias.at(indexValue).mimeType == Types::MimeType::Image)
         {
-            return m_medias.at(indexValue).path;
+            previewVariant = m_medias.at(indexValue).path;
         } else {
-            QDir dir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + (m_medias.at(indexValue).path.mid(7)));
+            QDir dir(m_thumbFilePath + (m_medias.at(indexValue).path.mid(7)));
             if (dir.exists("preview.jpg")) {
-                return QString("file://" + dir.absoluteFilePath("preview.jpg"));
+                previewVariant = QString("file://" + dir.absoluteFilePath("preview.jpg"));
             } else {
-                return m_medias.at(indexValue).path;
+                const_cast<MediaMimeTypeModel *>(this) -> m_filesToPreview[m_medias.at(indexValue).path] = QPersistentModelIndex(index);
+                previewVariant = "";//m_medias.at(indexValue).path;
             }
         }
-        return QVariant();
+        if(const_cast<MediaMimeTypeModel *>(this) -> dataRequestCount == m_medias.size()) {
+            const_cast<MediaMimeTypeModel *>(this) -> delayedPreview();
+            const_cast<MediaMimeTypeModel *>(this) -> dataRequestCount = 0;
+        }
+        return previewVariant;
     }
 
     case Roles::DurationRole:
@@ -161,7 +191,13 @@ QVariant MediaMimeTypeModel::data(const QModelIndex &index, int role) const
         QDateTime qdate = m_medias.at(indexValue).dateTime;
         int dayoffset = qdate.daysTo(currentDate);
         bool getLocalTimeIs24 = is24HourFormat();
-        QString currentDayString = getLocalTimeIs24 ? "hh:mm" : (QLatin1String("hh:mm") + " AP");
+        QString apStr = qdate.toString("AP");
+        QString currentDayString;
+        if(apStr == "AM" || apStr == "PM"){
+            currentDayString = getLocalTimeIs24 ? "hh:mm" : (QLatin1String("hh:mm") + " AP");
+        } else {
+            currentDayString = getLocalTimeIs24 ? "hh:mm" : "AP " +(QLatin1String("hh:mm"));
+        }
 
         if (dayoffset <= 7) {
             if (dayoffset < 1) {
@@ -198,7 +234,6 @@ QVariant MediaMimeTypeModel::data(const QModelIndex &index, int role) const
         return m_medias.at(indexValue).mimeType;
     }
     }
-
     return QVariant();
 }
 
@@ -211,14 +246,64 @@ int MediaMimeTypeModel::rowCount(const QModelIndex &parent) const
     return m_medias.size();
 }
 
+void MediaMimeTypeModel::delayedPreview()
+{
+    if(m_filesToPreview.size() <= 0) {
+        return;
+    }
+    QHash<QUrl, QPersistentModelIndex>::const_iterator i = m_filesToPreview.constBegin();
+
+    KFileItemList list;
+
+    while (i != m_filesToPreview.constEnd()) {
+        QUrl file = i.key();
+        QPersistentModelIndex index = i.value();
+
+        if (!m_previewJobs.contains(file) && file.isValid()) {
+            int angle = MediaStorage::instance()->getVideoAngle(file.toString());
+            list.append(KFileItem(file, QString(), angle));
+            m_previewJobs.insert(file, QPersistentModelIndex(index));
+        }
+
+        ++i;
+    }
+
+    if (list.size() > 0) {
+        QStringList plugins;
+        plugins << KIO::PreviewJob::availablePlugins();
+        KIO::PreviewJob *job = KIO::filePreview(list, m_screenshotSize, &plugins);
+        job->setIgnoreMaximumSize(true);
+        connect(job, &KIO::PreviewJob::gotPreview, this, &MediaMimeTypeModel::showPreview);
+    }
+
+    m_filesToPreview.clear();
+}
+
+void MediaMimeTypeModel::showPreview(const KFileItem &item, const QPixmap &preview)
+{
+    QPersistentModelIndex index = m_previewJobs.value(item.url());
+    QDir dir(m_thumbFilePath + item.localPath());
+    dir.mkpath(dir.absolutePath());
+
+    if(item.mode() > 0){
+        QTransform tranform;
+        tranform.rotate(item.mode());
+        QPixmap transPix = QPixmap(preview.transformed(tranform,Qt::SmoothTransformation));
+        transPix.save(dir.absolutePath()+ "/preview.jpg", "JPG");
+
+    } else {
+        preview.save(dir.absolutePath()+ "/preview.jpg", "JPG");
+    }
+    emit dataChanged(index, index);
+}
+
+
 bool MediaMimeTypeModel::dataRemoveRows(int row, int count, int dIndex, const QModelIndex &parent)
 {
-    beginRemoveRows({},dIndex,dIndex);
     for (int i = row; i < count+row; i++)
     {
-        deleteItemByIndex(i);
+        deleteItemByIndex(i,dIndex);
     }
-    endRemoveRows();
     return true;
 }
 
@@ -227,9 +312,6 @@ void MediaMimeTypeModel::setMimeType(Types::MimeType mimeType)
     beginResetModel();
     m_mimetype = mimeType;
     m_medias = MediaStorage::instance()->mediasForMimeType(m_mimetype);
-    for (int i = 0; i < m_medias.size() ; i++) {
-        MediaInfo item = m_medias.at(i);
-    }
     endResetModel();
 
     emit mimeTypeChanged();
@@ -238,4 +320,14 @@ void MediaMimeTypeModel::setMimeType(Types::MimeType mimeType)
 Types::MimeType MediaMimeTypeModel::mimeType() const
 {
     return m_mimetype;
+}
+
+bool MediaMimeTypeModel::deleteFilesStatus()
+{
+    return m_deleteFilesStatus;
+}
+void MediaMimeTypeModel::setDeleteFilesStatus(bool currentStatus)
+{
+    m_deleteFilesStatus = currentStatus;
+    emit deleteFilesStatusChanged();
 }

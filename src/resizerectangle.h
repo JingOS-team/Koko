@@ -1,6 +1,6 @@
 /*
  * SPDX-FileCopyrightText: (C) 2020 Carl Schwan <carl@carlschwan.eu>
- * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
+ * SPDX-FileCopyrightText: (C) Zhang He Gang <zhanghegang@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
@@ -17,11 +17,11 @@ public:
     ResizeRectangle(QQuickItem *parent = nullptr);
     Q_PROPERTY(QRectF moveAreaRect READ moveAreaRect WRITE setMoveAreaRect NOTIFY rectangleChanged)
 
-    QRectF moveAreaRect() {
+    QRectF moveAreaRect(){
         return m_moveArea;
     }
 
-    void setMoveAreaRect(const QRectF &moveArea) {
+    void setMoveAreaRect(const QRectF &moveArea){
         m_moveArea = moveArea;
         m_currentArea = QRectF(x(),y(),width(),height());
         Q_EMIT rectangleChanged();

@@ -36,12 +36,9 @@
         <file alias="video.png">assets/video.png</file>
         <file alias="edit_savetofile.png">assets/edit_savetofile.png</file>
         <file alias="edit_rename.png">assets/edit_rename.png</file>
-        <file alias="edit_delete.png">assets/edit_delete.png</file>
-        <file alias="edit_bulk.png">assets/edit_bulk.png</file>
         <file alias="check_default.png">assets/check_default.png</file>
         <file alias="check_ok.png">assets/check_ok.png</file>
         <file alias="item_check_ok.png">assets/item_check_ok.png</file>
-        <file alias="cancel.png">assets/cancel.png</file>
         <file alias="delete_default.png">assets/delete_default.png</file>
         <file alias="folders_default.png">assets/folders_default.png</file>
         <file alias="item_check_default.png">assets/item_check_default.png</file>
@@ -61,5 +58,9 @@
         <file alias="null_image.png">assets/null_image.png</file>
         <file alias="null_video.png">assets/null_video.png</file>
         <file alias="null_all.png">assets/null_all.png</file>
+        <file alias="image_default.png">assets/image_default.png</file>
+        <file alias="edit_bulk.svg">assets/edit_bulk.svg</file>
+        <file alias="edit_delete.svg">assets/edit_delete.svg</file>
+        <file alias="cancel.svg">assets/cancel.svg</file>
     </qresource>
 </RCC>

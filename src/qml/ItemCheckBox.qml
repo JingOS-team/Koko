@@ -1,15 +1,16 @@
-
-
 /*
- * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
+ * Copyright (C) 2021 Beijing Jingling Information System Technology Co., Ltd. All rights reserved.
  *
- * SPDX-License-Identifier: LGPL-2.1-or-later
+ * Authors:
+ * Zhang He Gang <zhanghegang@jingos.com>
+ *
  */
 import QtQuick 2.12
 import QtQuick.Controls 1.4 as Controls
 import QtQuick.Layouts 1.2
 import QtQuick.Controls.Styles 1.4
 import "common.js" as CSJ
+import org.kde.kirigami 2.15 as Kirigami
 
 Controls.CheckBox {
     id: itemCheckBox
@@ -30,7 +31,7 @@ Controls.CheckBox {
             anchors{
                 fill: parent
                 topMargin: isItem ? 0 : 2 * appScaleSize
-                rightMargin: 4 * appScaleSize//isItem ? 4 * appScaleSize : 0
+                rightMargin: 4 * appScaleSize
                 bottomMargin: isItem ? 4 * appScaleSize : 2 * appScaleSize
             }
             color: checked ? "#3C4BE8" : "transparent"
@@ -42,7 +43,6 @@ Controls.CheckBox {
                 anchors.centerIn: parent
                 width: itemCheckBox.width
                 height: itemCheckBox.width
-//                sourceSize: Qt.size(44,44)
                 source: isItem ? csource : (control.checked ? "qrc:/assets/item_check_ok.png" : imageSourceDefault)
             }
         }

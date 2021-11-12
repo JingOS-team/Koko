@@ -126,3 +126,15 @@ msgstr "你确定要删除这些视频吗？"
 
 msgid "yestday "
 msgstr "昨天 "
+
+msgid "Some files failed to be deleted due to lack of permission"
+msgstr "由于缺少权限，无法删除某些文件"
+
+msgid "Delete file"
+msgstr "删除文件"
+
+msgid "OK"
+msgstr "好"
+
+msgid "Deleting, please wait"
+msgstr "正在删除请稍后"

@@ -1,7 +1,7 @@
 /*
  * SPDX-FileCopyrightText: (C) 2014 Vishesh Handa <vhanda@kde.org>
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
- * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
+ * SPDX-FileCopyrightText: (C) 2021 Zhang He Gang <zhanghegang@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
@@ -88,7 +88,11 @@ public:
     Q_INVOKABLE QJsonArray selectedMedias();
     Q_INVOKABLE void updatePreview(const QString &url, const int &indexValue);
     Q_INVOKABLE int updateSelectCount();
-
+    Q_INVOKABLE void setFilterType(int type);
+protected:
+    bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override;
+private:
+    bool deleteFiles(QList<QString> files);
 protected Q_SLOTS:
     void setContainMedias(bool);
     void showPreview(const KFileItem &item, const QPixmap &preview);
@@ -102,6 +106,8 @@ signals:
     void checkSelectCountChanged();
     void photoSelectCountChanged();
     void videoSelectCountChanged();
+    void errorInfoPopup(QString errorText);
+    void moveToTrashChanged(bool finish);
 
 private:
     QByteArray m_sortRoleName;
@@ -117,6 +123,7 @@ private:
     KImageCache *m_imageCache;
     bool m_containMedias;
     bool isUpdate;
+    int m_currentType = 2;
 };
 }
 

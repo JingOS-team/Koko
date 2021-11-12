@@ -1,66 +1,70 @@
-/*
- * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
- *
- * SPDX-License-Identifier: LGPL-2.1-or-later
- */
 
+
+/*
+ * Copyright (C) 2021 Beijing Jingling Information System Technology Co., Ltd. All rights reserved.
+ *
+ * Authors:
+ * Zhang He Gang <zhanghegang@jingos.com>
+ *
+ */
 import QtQuick 2.15
 import QtQuick.Controls 2.15
-import org.kde.kirigami 2.12 as Kirigami
+import org.kde.kirigami 2.15 as Kirigami
 import org.kde.kquickcontrolsaddons 2.0 as KQA
 import org.kde.jinggallery 0.2 as Koko
 import QtGraphicalEffects 1.0
 import "common.js" as CSJ
 
-Rectangle {    
+Rectangle {
     id: tabBar
 
-    property int currentWidth:parent.width
-    property int currentHeight:parent.height
+    property int currentWidth: parent.width
+    property int currentHeight: parent.height
     property string selectedItem
-    property ListModel  model: listModel
-    property alias itemSelctCount : bulkView.selectCount
-    property bool bulkIsVisible:bulkView.visible
+    property ListModel model: listModel
+    property alias itemSelctCount: bulkView.selectCount
+    property bool bulkIsVisible: bulkView.visible
 
-    anchors{
+    anchors {
         left: parent.left
-        leftMargin:height/3
+        leftMargin: height / 3
     }
-    width:304 * appScaleSize//currentWidth *CSJ.TopBarWidth/CSJ.ScreenWidth
-    height: 35 * appScaleSize//currentHeight * CSJ.TopBarHeight/CSJ.ScreenHeight
-    color:"transparent"
-    radius: height*2/7
+    width: 304 * appScaleSize
+    height: 35 * appScaleSize
+    radius: height * 2 / 7
     z: 1
 
-    MouseArea{
+    MouseArea {
         anchors.fill: parent
         hoverEnabled: true
         onClicked: {
+
         }
     }
 
-    ShaderEffectSource{
-        id:eff
+    ShaderEffectSource {
+        id: eff
 
         anchors.centerIn: fastBlur
         width: fastBlur.width
         height: fastBlur.height
         visible: false
-        sourceRect: Qt.rect(getItemX(width,height),getItemY(width,height),width,height)
-        sourceItem: gridView.isCrossScreen ? gridView : tabBar
+        sourceRect: Qt.rect(getItemX(width, height), getItemY(width, height),
+                            width, height)
+        sourceItem: gridRect
 
-        function getItemX(width,height) {
-            var mapItem = eff.mapToItem(albumView,eff.x,eff.y,width,height)
+        function getItemX(width, height) {
+            var mapItem = eff.mapToItem(gridRect, 0, 0)
             return mapItem.x
         }
 
-        function getItemY(width,height) {
-            var mapItem = eff.mapToItem(albumView,eff.x,eff.y,width,height)
+        function getItemY(width, height) {
+            var mapItem = eff.mapToItem(gridRect, 0, 0)
             return mapItem.y
         }
     }
-    FastBlur{
-        id:fastBlur
+    FastBlur {
+        id: fastBlur
 
         anchors.fill: parent
         source: eff
@@ -69,38 +73,37 @@ Rectangle {
         visible: false
     }
 
-    Rectangle{
-        id:maskRect
+    Rectangle {
+        id: maskRect
 
-        anchors.fill:fastBlur
-        radius: height*2/7
+        anchors.fill: fastBlur
+        radius: height * 2 / 7
         visible: false
         clip: true
     }
 
-    OpacityMask{
-        id:mask
+    OpacityMask {
+        id: mask
         anchors.fill: maskRect
-        visible: gridView.isCrossScreen
         source: fastBlur
         maskSource: maskRect
     }
 
-    Rectangle{
-        id:backRect
+    Rectangle {
+        id: backRect
 
         width: parent.width
         height: parent.height
-        radius: height*2/7
-        color: "#80FFFFFF"
+        radius: height * 2 / 7
+        color: Kirigami.JTheme.headerBackground
     }
 
-    BulkView{
-        id:bulkView
+    BulkView {
+        id: bulkView
 
         visible: false
         anchors.centerIn: parent
-        selectCount : albumView.itemCheckSelectCount
+        selectCount: albumView.itemCheckSelectCount
         tabBarSelectText: selectedItem
 
         onCancelClicked: {
@@ -109,7 +112,7 @@ Rectangle {
 
         onDeleteClicked: {
             albumView.deleteItemClicked()
-            cancelBulk();
+            cancelBulk()
         }
 
         onAllChecked: {
@@ -132,22 +135,21 @@ Rectangle {
 
     function itemCheckBoxClick(isChecked) {
         if (isChecked) {
-            bulkView.selectCount++;
+            bulkView.selectCount++
         } else {
             if (bulkView.selectCount > 0) {
-                bulkView.selectCount--;
+                bulkView.selectCount--
             }
         }
     }
 
-    ListModel{
-        id:listModel
+    ListModel {
+        id: listModel
     }
-    
+
     onSelectedItemChanged: {
-        for (var i=0; i < btnRepeater.count; ++i)
-        {
-            var btn = btnRepeater.itemAt(i);
+        for (var i = 0; i < btnRepeater.count; ++i) {
+            var btn = btnRepeater.itemAt(i)
             if (selectedItem === btn.text) {
                 btn.checked = true
                 btn.focus = true
@@ -158,48 +160,49 @@ Rectangle {
         }
     }
 
-    Component{
-        id:btnDelegate
+    Component {
+        id: btnDelegate
         Button {
             id: btn
 
             anchors.verticalCenter: idRow.verticalCenter
-            width: tabBar.width/3-2
-            height: tabBar.height *0.9
+            width: tabBar.width / 3 - 2 * appScaleSize
+            height: tabBar.height * 0.9
             checked: text == tabBar.selectedItem ? true : false
             focus: text == tabBar.selectedItem ? true : false
-            focusPolicy:Qt.StrongFocus
+            focusPolicy: Qt.StrongFocus
 
             onPressed: {
-                root.filterBy(btnContent.text)
+                albumView.filterBy(btnContent.text)
                 tabBar.selectedItem = btnContent.text
             }
-            contentItem: Rectangle{
+            contentItem: Rectangle {
 
                 color: "transparent"
                 opacity: btnContent.text == tabBar.selectedItem ? 1.0 : 0.4
 
-                Image {
+                Kirigami.Icon {
                     id: btnImage
 
-                    anchors{
+                    anchors {
                         verticalCenter: parent.verticalCenter
                         left: parent.left
-                        leftMargin: (parent.width-btnImage.width-btnContent.contentWidth- btn.height/4)/2
+                        leftMargin: (parent.width - btnImage.width
+                                     - btnContent.contentWidth - btn.height / 4) / 2
                     }
-                    width: 22 //* appScaleSize//btn.height/2
+                    width: 22 * appScaleSize
                     height: width
-                    source:getImageSource()
-//                    sourceSize: Qt.size(width,height)
+                    source: getImageSource()
+                    color: Kirigami.JTheme.majorForeground
 
                     function getImageSource() {
-                        switch(index) {
+                        switch (index) {
                         case 0:
-                            return "qrc:/assets/all.png";
+                            return "qrc:/assets/all.png"
                         case 1:
-                            return "qrc:/assets/pic.png";
+                            return "qrc:/assets/pic.png"
                         case 2:
-                            return "qrc:/assets/video.png";
+                            return "qrc:/assets/video.png"
                         }
                         return ""
                     }
@@ -207,20 +210,20 @@ Rectangle {
                 Text {
                     id: btnContent
 
-                    anchors{
+                    anchors {
                         left: btnImage.right
-                        leftMargin: btn.height/4
+                        leftMargin: btn.height / 4
                         verticalCenter: parent.verticalCenter
                     }
                     text: qsTr(listModel.get(index).title)
-                    color: "#000000"
-                    font.pixelSize: root.defaultFontSize
+                    color: Kirigami.JTheme.majorForeground
+                    font.pixelSize: root.defaultFontSize * appFontSize
                 }
             }
             background: Rectangle {
                 radius: tabBar.radius
-                color: btnContent.text === tabBar.selectedItem ?"#FFFFFF": "transparent"
-                opacity: btnContent.text == tabBar.selectedItem ? 1.0 : 0.6
+                color: btnContent.text
+                       === tabBar.selectedItem ? Kirigami.JTheme.currentBackground : "transparent"
             }
         }
     }
@@ -235,8 +238,8 @@ Rectangle {
         visible: !bulkView.visible
 
         Repeater {
-            id:btnRepeater
-            model:listModel
+            id: btnRepeater
+            model: listModel
             delegate: btnDelegate
         }
     }

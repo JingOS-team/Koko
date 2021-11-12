@@ -1,4 +1,10 @@
-
+/*
+ * Copyright (C) 2021 Beijing Jingling Information System Technology Co., Ltd. All rights reserved.
+ *
+ * Authors:
+ * Zhang He Gang <zhanghegang@jingos.com>
+ *
+ */
 import QtQuick 2.5
 import QtQuick 2.9
 import QtQuick.Controls 2.2
@@ -24,9 +30,7 @@ Flickable
     z: 1000
 
     onContentXChanged:{
-        //&& ( (contentX/2) != (x+width))
-       //console.log(" flick contentX:" + contentX + " flickY:" + (x+width))
-    }
+          }
 
     ScrollBar.vertical: ScrollBar {}
     ScrollBar.horizontal: ScrollBar {}
@@ -274,7 +278,6 @@ Flickable
                 asynchronous: true
                 source: flick.source
                 playing: true
-// 				onStatusChanged: playing = (status == AnimatedImage.Ready)
                 cache: true
                 onStatusChanged: {
                     if (status === AnimatedImage.Ready

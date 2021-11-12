@@ -1,0 +1,55 @@
+Source: koko
+Section: kde
+Priority: optional
+XSBC-Original-Maintainer: Debian/Kubuntu KDE Extras Team <pkg-kde-extras@lists.alioth.debian.org>
+Build-Depends: baloo-kf5-dev,
+               cmake (>= 2.6.2),
+               debhelper (>= 9),
+               extra-cmake-modules,
+               libexiv2-dev (>= 0.21),
+               libkf5config-dev,
+               libkf5declarative-dev,
+               libkf5filemetadata-dev,
+               libkf5i18n-dev,
+	       libmediainfo-dev,
+               libkf5notifications-dev,
+               libkf5plasma-dev,
+               libmediainfo-dev,
+               pkg-config,
+               pkg-kde-tools (>= 0.12),
+               qtbase5-dev,
+               qtquickcontrols2-5-dev,
+               qtdeclarative5-dev,
+               libqt5multimedia5,
+               libqt5multimediaquick5,
+	       libexiv2-dev,
+	       libkf5dbusaddons-dev,
+	       japp-sdk-qt-dev,
+               wget
+Standards-Version: 3.9.5
+XS-Testsuite: autopkgtest
+Vcs-Git: https://invent.kde.org/neon/neon-packaging/koko.git
+Vcs-Browser: https://invent.kde.org/neon/neon-packaging/koko
+Maintainer: Neon CI <neon@kde.org>
+
+Package: koko
+Architecture: any
+Depends: plasma-framework,
+         qml-module-qtgraphicaleffects,
+         ${misc:Depends},
+         ${shlibs:Depends},
+         ffmpegthumbs,
+         ffmpeg
+Description: KDE Image Gallery
+ A KDE Image Gallery.
+
+Package: koko-dbg
+Section: debug
+Architecture: any
+Priority: extra
+Depends: koko (= ${binary:Version}), ${misc:Depends}
+Description: KDE Image Gallery - debug symbols
+ A KDE Image Gallery.
+ .
+ This package contains debugging files used to investigate problems with
+ the Qt Cryptographic Architecture libraries.

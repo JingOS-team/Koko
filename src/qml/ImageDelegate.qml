@@ -4,7 +4,7 @@
  * SPDX-FileCopyrightText: (C) 2015 Vishesh Handa <vhanda@kde.org>
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
  * SPDX-FileCopyrightText: (C) 2017 Marco Martin <mart@kde.org>
- *                             2021 Wang Rui <wangrui@jingos.com>
+ *                             Zhang He Gang <zhanghegang@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
  */
@@ -145,6 +145,7 @@ Flickable {
 
             onStatusChanged: {
                 if (status === Image.Ready && listView.currentIndex === index) {
+                    console.log("status changed")
                     imgColors.update()
                 }
             }

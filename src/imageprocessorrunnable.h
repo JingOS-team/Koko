@@ -1,6 +1,6 @@
 /*
  * SPDX-FileCopyrightText: (C) 2015 Vishesh Handa <vhanda@kde.org>
- * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
+ * SPDX-FileCopyrightText: (C) 2021 Zhang He Gang <zhanghegang@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
@@ -20,7 +20,13 @@ class ImageProcessorRunnable : public QObject, public QRunnable
 {
     Q_OBJECT
 public:
+    enum ProcessType{
+        Process_Default = 0,
+        Process_Update = 1
+    };
     ImageProcessorRunnable(QString &filePath, Types::MimeType type, ReverseGeoCoder *coder);
+    ImageProcessorRunnable(const QString &filePath, Types::MimeType type, ProcessType processType);
+
     void run() override;
 
 signals:
@@ -30,6 +36,7 @@ private:
     QString m_path;
     Types::MimeType m_type;
     ReverseGeoCoder *m_geoCoder;
+    ProcessType m_processType;
 };
 }
 

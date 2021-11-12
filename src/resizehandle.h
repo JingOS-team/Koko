@@ -1,6 +1,6 @@
 /*
  *   Copyright 2019 by Marco Martin <mart@kde.org>
- *             2021 Wang Rui <wangrui@jingos.com>
+ *             2021 Zhang He Gang <zhanghegang@jingos.com>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -47,11 +47,11 @@ public:
     ResizeHandle(QQuickItem *parent = nullptr);
     ~ResizeHandle() = default;
 
-    QRectF moveAreaRect() {
+    QRectF moveAreaRect(){
         return m_moveArea;
     }
 
-    void setMoveAreaRect(const QRectF &moveArea) {
+    void setMoveAreaRect(const QRectF &moveArea){
         m_moveArea = moveArea;
         Q_EMIT moveRectChanged();
     }

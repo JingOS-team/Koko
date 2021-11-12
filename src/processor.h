@@ -1,6 +1,6 @@
 /*
  * SPDX-FileCopyrightText: (C) 2014  Vishesh Handa <me@vhanda.in>
- * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
+ * SPDX-FileCopyrightText: (C) 2021  Zhang He Gang <zhanghegang@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
@@ -32,7 +32,7 @@ public:
 
     bool finished() const
     {
-        return m_initialScanDone;
+        return m_isFinished;
     }
 
 signals:
@@ -42,8 +42,9 @@ signals:
 
 public slots:
     void addFile(const QString &filePath, Types::MimeType type);
-    void removeFile(const QString &filePath);
+    void removeFile(const QList<QString> &filePaths);
     void initialScanCompleted();
+    void updateFile(const QString &filePath, Types::MimeType type);
 
 private slots:
     void process();
@@ -57,6 +58,7 @@ private:
     CommitTimer m_commitTimer;
     ReverseGeoCoder m_geoCoder;
     bool m_initialScanDone;
+    bool m_isFinished = false;
 };
 
 }

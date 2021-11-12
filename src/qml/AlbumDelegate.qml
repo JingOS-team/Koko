@@ -2,7 +2,7 @@
 
 /*
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
- *                             2021 Wang Rui <wangrui@jingos.com>
+ *                             Zhang He Gang <zhanghegang@jingos.com>
  * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 import QtQuick 2.7
@@ -21,9 +21,11 @@ Rectangle {
     property bool isVideoType: modelData.mediaType === 1
     property int duration: modelData.duration
     property bool itemHoverd
-    property alias isMenuOpen : selectionHighlight.isShow
+    property alias isMenuOpen: selectionHighlight.isShow
     property int count
-    property int checkboxHeight: 22 
+    property int checkboxHeight: 22 * appScaleSize
+    property var datamediaUrl: modelData.mediaurl
+
     signal clicked(var mouse)
     signal rightClicked(var mouse)
     signal pressAndHold(var mouse)
@@ -33,6 +35,11 @@ Rectangle {
     height: gridView.cellHeight
     color: "transparent"
 
+    Component.onCompleted: {
+        if (duration <= 0 & isVideoType) {
+            jingGalleryProcessor.updateFile(datamediaUrl,modelData.mediaType)
+        }
+    }
     function reloadImage() {
         image.cache = false
         image.source = ""
@@ -49,9 +56,14 @@ Rectangle {
         smooth: true
         asynchronous: true
         sourceSize: Qt.size(width, height)
-        source: (isVideoType
-                 && imageSource == "") ? "qrc:/assets/video_default.png" : imageSource //+"*"+count//"image://imageProvider/"+ modelData.mediaurl //"file:///home/test/Pictures/abhi-bakshi--adV1rnXsWQ-unsplash.jpg"
         fillMode: Image.PreserveAspectCrop
+        source: {
+            if (isVideoType) {
+                return imageSource == "" ? "qrc:/assets/video_default.png" : imageSource
+            } else {
+                return imageSource == "" ? "qrc:/assets/image_default.png" : imageSource
+            }
+        }
 
         onVisibleChanged: {
             if (visible) {
@@ -67,7 +79,6 @@ Rectangle {
 
         width: parent.width
         height: parent.height
-//        visible: albumDelegate.itemHoverd
         color: "transparent"
         onItemClicked: {
             if (mouse.button !== Qt.RightButton && itemCheckBox.visible) {
@@ -80,31 +91,6 @@ Rectangle {
             albumDelegate.pressAndHold(mouse)
         }
     }
-
-//    MouseArea {
-//        id: albumThumbnailMouseArea
-
-//        acceptedButtons: Qt.LeftButton | Qt.RightButton
-//        anchors.fill: parent
-//        hoverEnabled: true
-
-//        onEntered: {
-//            albumDelegate.itemHoverd = true
-//        }
-//        onExited: {
-//            albumDelegate.itemHoverd = false
-//        }
-//        onPressAndHold: {
-//            albumDelegate.pressAndHold(mouse)
-//        }
-//        onClicked: {
-//            if (mouse.button !== Qt.RightButton && itemCheckBox.visible) {
-//                gridView.model.toggleSelected(model.index)
-//            } else {
-//                albumDelegate.clicked(mouse)
-//            }
-//        }
-//    }
 
     Keys.onPressed: {
         switch (event.key) {
@@ -166,9 +152,8 @@ Rectangle {
                 leftMargin: height / 5
                 verticalCenter: parent.verticalCenter
             }
-            width: 18 //* appScaleSize//parent.width * CSJ.Item_Video_Width / CSJ.Item_Width
+            width: 18 * appScaleSize //parent.width * CSJ.Item_Video_Width / CSJ.Item_Width
             height: width
-//            sourceSize: Qt.size(36,36)
             source: "qrc:/assets/audio.png"
         }
 
@@ -184,7 +169,7 @@ Rectangle {
                 verticalCenter: parent.verticalCenter
             }
             text: getDurationTime()
-            font.pixelSize: root.defaultFontSize - 3
+            font.pixelSize: (root.defaultFontSize - 3) * appFontSize
             color: "#FFFFFF"
 
             function getDurationTime() {
@@ -194,7 +179,7 @@ Rectangle {
                 var secondsS = seconds > 9 ? seconds : "0" + seconds
                 var minS = min > 9 ? min : "0" + min
                 var hourS = hour > 9 ? hour : "0" + hour
-                return hour > 0 ? (hourS + ":" + minS + ":" + secondsS) : ( minS + ":" + secondsS)
+                return hour > 0 ? (hourS + ":" + minS + ":" + secondsS) : (minS + ":" + secondsS)
             }
         }
     }

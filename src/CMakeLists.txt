@@ -73,6 +73,7 @@ target_link_libraries(jinggallery
     KF5::GuiAddons
     KF5::KIOFileWidgets
     KF5::KIOWidgets
+    jappcoreqt
 )
 
 if (ANDROID)

@@ -1,12 +1,12 @@
 /*
  * SPDX-FileCopyrightText: (C) 2017 Atul Sharma <atulsharma406@gmail.com>
- *                             2021 Wang Rui <wangrui@jingos.com>
+ *                             Zhang He Gang <zhanghegang@jingos.com>
  *
  * SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
  */
 
 import QtQuick 2.7
-import org.kde.kirigami 2.1 as Kirigami
+import org.kde.kirigami 2.15 as Kirigami
 
 Rectangle { 
     id: hoverItem
@@ -32,7 +32,8 @@ Rectangle {
             width: hoverItem.width
             height: hoverItem.height
             radius: hoverItem.radius
-            color: hoverItem.itemPressed ? "#4D787880" : "#33767680"
+            //"#4D787880" : "#33767680"
+            color: hoverItem.itemPressed ? Kirigami.JTheme.pressBackground : Kirigami.JTheme.hoverBackground
 
             Behavior on y {
                 SpringAnimation {
@@ -63,7 +64,7 @@ Rectangle {
             width: hoverItem.width
             height: hoverItem.height
             radius: hoverItem.radius
-            color: "#4D787880"
+            color: Kirigami.JTheme.pressBackground//"#4D787880"
 
             Behavior on y {
                 SpringAnimation {

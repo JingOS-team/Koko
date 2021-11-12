@@ -1,9 +1,9 @@
-
-
 /*
- * SPDX-FileCopyrightText: (C) 2021 Wang Rui <wangrui@jingos.com>
+ * Copyright (C) 2021 Beijing Jingling Information System Technology Co., Ltd. All rights reserved.
  *
- * SPDX-License-Identifier: LGPL-2.1-or-later
+ * Authors:
+ * Zhang He Gang <zhanghegang@jingos.com>
+ *
  */
 import QtQuick 2.15
 import org.kde.kquickcontrolsaddons 2.0 as KQA
@@ -15,9 +15,9 @@ import "common.js" as CSJ
 Item {
     id: cropView
 
-    property int cropImageMaxHeight: 515 * appScaleSize//cropView.height * CSJ.Item_Crop_Heigh / CSJ.Item_Crop_View_Heigh
+    property int cropImageMaxHeight: 515 * appScaleSize
     property int cropImageMaxWidth: cropView.width * 4 / 5
-    property int cropImageHeight: 515 * appScaleSize//cropView.height * CSJ.Item_Crop_Heigh / CSJ.Item_Crop_View_Heigh
+    property int cropImageHeight: 515 * appScaleSize
     property int cropImageWidth: cropView.width * 4 / 5
 
     width: parent.width
@@ -51,11 +51,6 @@ Item {
         id: flickable
 
         anchors.centerIn: cropView
-//        anchors{
-//         right: rightToolView.left
-//         rightMargin: 16 * appScaleSize
-//         verticalCenter: cropView.verticalCenter
-//        }
         width: cropImageWidth
         height: cropImageHeight
         contentWidth: width
@@ -173,7 +168,6 @@ Item {
             }
 
             onPinchUpdated: {
-//                console.log(" pinch scale update:" + pinch.scale + " initialWidth:" + initialWidth)
                 flickable.resizeContent(initialWidth * pinch.scale,
                                         initialHeight * pinch.scale,
                                         pinch.center)
@@ -471,14 +465,10 @@ Item {
 
                 function getItemX(width, height) {
                    var mapItem = ett.mapToItem(flickable, 0, 0)
-//                    var mapItem = ett.mapToItem(flickable, ett.x, ett.y,
-//                                                width, height)
                     return mapItem.x
                 }
                 function getItemY(width, height) {
                     var mapItem = ett.mapToItem(flickable, 0, 0)
-//                    var mapItem = ett.mapToItem(flickable, ett.x, ett.y,
-//                                                width, height)
                     return mapItem.y
                 }
             }

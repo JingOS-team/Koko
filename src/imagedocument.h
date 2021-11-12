@@ -1,7 +1,7 @@
 /*
  *   Copyright 2017 by Atul Sharma <atulsharma406@gmail.com>
  *   Copyright 2020 by Carl Schwan <carl@carlschwan.eu>
- *             2021 Wang Rui <wangrui@jingos.com>
+ *             2021 Zhang He Gang <zhanghegang@jingos.com>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
